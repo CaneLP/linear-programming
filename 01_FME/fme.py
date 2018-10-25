@@ -28,6 +28,12 @@ class SystemOfInequalities:
     def set_matrix_a(self, new_matrix):
         self.matrix_a = new_matrix
 
+    def set_initial_matrix_a(self, new_matrix):
+        self.initial_matrix_a = new_matrix
+
+    def set_var_num(self, new_var_num):
+        self.var_num = new_var_num
+
     @staticmethod
     def bad_system(matrix):
         for i in range(matrix.shape[0]):
@@ -192,7 +198,34 @@ def main():
             else:
                 print("Point (%s, %s, %s) IS in the interval" % (point[0][0], point[0][1], point[0][2]))
         elif test_type == 3:
-            pass
+            c = []
+            fm_format = int(input("System of inequalities format? (1: Ax <= b; 2: Ax >=b) "))
+            if fm_format == 1:
+                matrix_a = np.negative(matrix_a)
+            print("Enter vector c, which will be optimized: ")
+            c.append(list(map(float, input().rstrip().split())))
+            optimization_problem = input("Optimization (min/max)? ")
+            matrix_a = np.r_[matrix_a, np.eye(matrix_a.shape[1]-1, matrix_a.shape[1])]
+            matrix_a = np.c_[matrix_a[:, 0:-1], np.zeros(shape=(matrix_a.shape[0], 1)), matrix_a[:, -1:]]
+            if optimization_problem == "min":
+                c = np.c_[c, np.ones(shape=(1, 1)), np.zeros(shape=(1, 1))]
+                c = np.negative(c)
+                c[0][-2] = -c[0][-2]
+                matrix_a = np.r_[c, matrix_a]
+                system.set_matrix_a(matrix_a)
+                system.set_initial_matrix_a(matrix_a)
+                system.set_var_num(matrix_a.shape[1]-1)
+                intervals = system.solve_system_intervals()
+                print(max(intervals[-1].a[:, -1:])[0])
+            elif optimization_problem == "max":
+                c = np.c_[c, np.ones(shape=(1, 1)), np.zeros(shape=(1, 1))]
+                c[0][-2] = -c[0][-2]
+                matrix_a = np.r_[c, matrix_a]
+                system.set_matrix_a(matrix_a)
+                system.set_initial_matrix_a(matrix_a)
+                system.set_var_num(matrix_a.shape[1]-1)
+                intervals = system.solve_system_intervals()
+                print(min(intervals[-1].b[:, -1:])[0])
 
         ans = input("Do you want to continue testing? (y/n) ")
 
