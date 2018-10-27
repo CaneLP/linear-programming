@@ -216,6 +216,8 @@ def main():
                 system.set_initial_matrix_a(matrix_a)
                 system.set_var_num(matrix_a.shape[1]-1)
                 intervals = system.solve_system_intervals()
+                if len(intervals) == 0:
+                    break
                 print(max(intervals[-1].a[:, -1:])[0])
             elif optimization_problem == "max":
                 c = np.c_[c, np.ones(shape=(1, 1)), np.zeros(shape=(1, 1))]
@@ -225,6 +227,8 @@ def main():
                 system.set_initial_matrix_a(matrix_a)
                 system.set_var_num(matrix_a.shape[1]-1)
                 intervals = system.solve_system_intervals()
+                if len(intervals) == 0:
+                    break
                 print(min(intervals[-1].b[:, -1:])[0])
 
         ans = input("Do you want to continue testing? (y/n) ")
