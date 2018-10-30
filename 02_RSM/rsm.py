@@ -40,8 +40,6 @@ class RSM:
                 if cn_p[j] < 0:
                     break
 
-            print(B)
-            print(self.a[:, q[j]])
             y = np.zeros(shape=(1, self.a.shape[1]))
             y[:, p] = np.linalg.solve(B, self.a[:, q[j]])
             t = np.zeros(shape=(1, self.a.shape[1]))[0]
