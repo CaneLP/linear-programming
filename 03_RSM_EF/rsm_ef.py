@@ -1,7 +1,30 @@
 import numpy as np
+import sys
 
 
-class RSM:
+class FileLogger(object):
+    def __init__(self, filename, mode):
+        self.terminal = sys.stdout
+        self.logfile = open(filename, mode)
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.logfile.write(message)
+
+    def flush(self):
+        pass
+
+
+def start_logging_to_file(filename, mode):
+    sys.stdout = FileLogger(filename, mode)
+
+
+def stop_logging_to_file():
+    sys.stdout.logfile.close()
+    sys.stdout = sys.stdout.terminal
+
+
+class RSM_EF:
     def __init__(self, a, b, c, var_num, f_opt_sign):
         self.a = a
         self.b = b
@@ -15,7 +38,15 @@ class RSM:
         p = [i for i in range(self.initial_var_num, self.a.shape[1])]
         q = [i for i in range(self.initial_var_num)]
         self.c = np.c_[self.c, np.zeros(shape=(1, self.a.shape[1]-self.initial_var_num))]
-
+        B = self.a[:, p]
+        E = np.eye(len(p))
+        eta_matrices = []
+        print("Input:\nA = \n%s,\n b = %s," % (self.a[:, :-self.initial_var_num], self.b))
+        if self.f_opt_sign == -1:
+            print("(max) c = %s" % self.c[0])
+        else:
+            print("(min) c = %s" % self.c[0])
+        print("*********************************")
         print("Initial x0 is: %s" % str(x0))
         print("Initial P is: %s" % str(p))
         print("Initial Q is: %s" % str(q))
@@ -24,14 +55,24 @@ class RSM:
         while True:
             cb = np.array(self.c[0, p])
             cn = np.array(self.c[0, q])
-            B = self.a[:, p]
-            N = self.a[:, q]
+            B = np.matmul(B, E)
+            v = []
+            for i in range(len(eta_matrices) - 1):
+                if i == 0:
+                    v.append(np.matmul(cb, np.linalg.inv(eta_matrices[-1])))
+                else:
+                    v.append(np.matmul(v[-i], np.linalg.inv(eta_matrices[-1-i])))
             u = np.matmul(cb, np.linalg.inv(B))
+
+            N = self.a[:, q]
             cn_p = cn - np.matmul(u, N)
 
             if np.count_nonzero(cn_p < 0) == 0:
                 print("*********************************")
                 print("Optimal solution is found after %d iterations:\nx0: %s" % (iter_num, str(x0)))
+                for w in range(len(v)):
+                    print("v%d = %s" % (w, v[w]))
+                print("u = %s" % u)
                 print("f_opt = %s" % (u.dot(self.b)*self.f_opt_sign))
                 break
 
@@ -40,8 +81,6 @@ class RSM:
                 if cn_p[j] < 0:
                     break
 
-            print(B)
-            print(self.a[:, q[j]])
             y = np.zeros(shape=(1, self.a.shape[1]))
             y[:, p] = np.linalg.solve(B, self.a[:, q[j]])
             t = np.zeros(shape=(1, self.a.shape[1]))[0]
@@ -74,24 +113,33 @@ class RSM:
             x0 = x0+t*t_min
             x0[l] = 0
 
-            p.remove(l)
-            p.append(q[j])
-            q.remove(q[j])
-            q.append(l)
-            p.sort()
-            q.sort()
-
             print("***********ITERATION %s***********" % iter_num)
-            iter_num += 1
             print("Current x0 is: %s" % str(x0))
             print("Current P is: %s" % str(p))
             print("Current Q is: %s" % str(q))
             print("f = %s" % (u.dot(self.b)*self.f_opt_sign))
+            E = np.eye(len(p))
+            E[:, p.index(l)] = y[0, p]
+            eta_matrices.append(E)
+            p[p.index(l)] = q[j]
+            q.remove(q[j])
+            q.append(l)
+            print("E%d = " % iter_num)
+            print(E)
+            for w in range(len(v)):
+                print("v%d = %s" % (w, v[w]))
+            print("u = %s" % u)
+            iter_num += 1
+        print("\n\n")
 
 
 def main():
+    output_file = "output.txt"
+    mode = "a"
+    sys.stdout = FileLogger(output_file, mode)
     ans = 'y'
     while ans == 'y':
+        stop_logging_to_file()
         rows = int(input("Enter number of rows in the matrix A: "))
         columns = int(input("Enter number of columns in the matrix A: "))
         matrix_a = []
@@ -115,10 +163,12 @@ def main():
             f_opt_sign = -1
             c = np.negative(c)
 
-        problem = RSM(matrix_a, b[0], c, columns, f_opt_sign)
+        problem = RSM_EF(matrix_a, b[0], c, columns, f_opt_sign)
+        start_logging_to_file(output_file, mode)
         problem.solve_problem()
-
+        stop_logging_to_file()
         ans = input("Do you want to continue testing? (y/n) ")
+        start_logging_to_file(output_file, mode)
 
 
 if __name__ == '__main__':
