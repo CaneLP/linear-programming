@@ -1,13 +1,6 @@
 # Fourier-Motzkin Elimination
 import numpy as np
 import copy
-import enum
-
-
-class RelationSymbols(enum.Enum):
-    greater = 1
-    less = -1
-    zero = 0
 
 
 class InequalityInterval:
@@ -34,6 +27,7 @@ class SystemOfInequalities:
     def set_var_num(self, new_var_num):
         self.var_num = new_var_num
 
+    # Checking if the system contains inaccurate inequality
     @staticmethod
     def bad_system(matrix):
         for i in range(matrix.shape[0]):
@@ -50,11 +44,10 @@ class SystemOfInequalities:
     def solve_system_intervals(self):
         intervals = []
         matrix_a_curr = copy.deepcopy(self.matrix_a)
-        # print(matrix_a_curr)
 
-        # loop for each variable x_1, x_2, ..., x_n
+        # Loop for each variable x_1, x_2, ..., x_n
         for j in range(self.var_num):
-            # get cardinality of sets I, J, K
+            # Get cardinality of sets I, J, K
             i_plus_inequalities = np.zeros(shape=(np.count_nonzero(matrix_a_curr[:, j] > 0), self.var_num+1))
             i_minus_inequalities = np.zeros(shape=(np.count_nonzero(matrix_a_curr[:, j] < 0), self.var_num+1))
             i_zero_inequalities = np.zeros(shape=(np.count_nonzero(matrix_a_curr[:, j] == 0), self.var_num+1))
@@ -63,10 +56,10 @@ class SystemOfInequalities:
             row_minus = 0
             row_zero = 0
 
-            # loop for each row in the current system and determine interval for x_1, x_2, ..., x_n
+            # Loop for each row in the current system and determine interval for x_1, x_2, ..., x_n
             for i in range(matrix_a_curr.shape[0]):
 
-                # getting I, J, K inequalities from the current system
+                # Getting I, J, K inequalities from the current system
                 if matrix_a_curr[i][j] != 0:
                     if matrix_a_curr[i][j] > 0:
                         i_plus_inequalities[row_plus] = np.divide(np.negative(matrix_a_curr[i]), matrix_a_curr[i][j])
@@ -80,11 +73,11 @@ class SystemOfInequalities:
                     i_zero_inequalities[row_zero] = (matrix_a_curr[i])
                     row_zero += 1
 
-            # determining the dimension of next system using the information about sets I, J, K
+            # Determining the dimension of next system using the information about sets I, J, K
             next_system_dimension = i_plus_inequalities.shape[0] * i_minus_inequalities.shape[0] + \
                 i_zero_inequalities.shape[0]
             matrix_a_temp = np.zeros(shape=(next_system_dimension, self.var_num+1))
-            # calculating all possible values for left and the right edges of the interval
+            # Calculating all possible values for left and the right edges of the interval
             if next_system_dimension > 0:
                 row_num = 0
                 for k in range(i_plus_inequalities.shape[0]):
@@ -94,7 +87,7 @@ class SystemOfInequalities:
                 for k in range(i_zero_inequalities.shape[0]):
                     matrix_a_temp[row_num] = i_zero_inequalities[k]
                     row_num += 1
-                # if there are no elements for some edge of the interval, set that edge to appropriate inf
+                # If there are no elements for some edge of the interval, set that edge to appropriate inf
                 left_interval = SystemOfInequalities.change_b_sign(i_plus_inequalities)
                 right_interval = SystemOfInequalities.change_b_sign(i_minus_inequalities)
                 if len(left_interval) == 0:
@@ -119,7 +112,6 @@ class SystemOfInequalities:
                 return []
 
             matrix_a_curr = matrix_a_temp
-            # print(matrix_a_curr)
 
         return intervals
 
@@ -145,6 +137,7 @@ class SystemOfInequalities:
 def main():
     ans = 'y'
     while ans == 'y':
+        fm_format = int(input("System of inequalities format? (1: Ax <= b; 2: Ax >=b) "))
         rows = int(input("Enter number of rows in the matrix A: "))
         columns = int(input("Enter number of columns in the matrix A: "))
         matrix_a = []
@@ -159,6 +152,9 @@ def main():
         matrix_a = np.array(matrix_a)
         matrix_a = np.c_[matrix_a, np.transpose(np.array(b))]
 
+        if fm_format == 1:
+            matrix_a = np.negative(matrix_a)
+
         system = SystemOfInequalities(matrix_a)
 
         test_type = int(input("Enter the type of test:\n"
@@ -168,10 +164,15 @@ def main():
         if test_type == 1:
             var_values = []
             positions = []
+            # Determining interval for first variable from the left in the system and asking the user
+            # to choose a value from the interval. Import chosen value and repeat the procedure for
+            # each variable in the system
             for i in range(matrix_a.shape[1]-1):
                 if i == 0:
                     if len(system.solve_system_intervals()) == 0:
                         break
+                # Using elementary transformations of matrices, put the current variable
+                # to the last column of each row
                 permutation = [j for j in range(matrix_a.shape[1]-1)]
                 permutation.append(matrix_a.shape[1]-1)
                 temp = permutation[-2]
@@ -199,9 +200,6 @@ def main():
                 print("Point (%s, %s, %s) IS in the interval" % (point[0][0], point[0][1], point[0][2]))
         elif test_type == 3:
             c = []
-            fm_format = int(input("System of inequalities format? (1: Ax <= b; 2: Ax >=b) "))
-            if fm_format == 1:
-                matrix_a = np.negative(matrix_a)
             print("Enter vector c, which will be optimized: ")
             c.append(list(map(float, input().rstrip().split())))
             optimization_problem = input("Optimization (min/max)? ")
