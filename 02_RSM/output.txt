@@ -1,10 +1,11 @@
 Input:
 A = 
-[[ 1. -1. -1.]
- [ 5.  1.  3.]
- [-1.  2.  3.]],
+[[ 1. -1. -1.  3.]
+ [ 5.  1.  3.  8.]
+ [-1.  2.  3. -5.]],
  b = [1.0, 55.0, 3.0],
-(max) c = [-4. -1. -5. -3.  0.  0.  0.]
+Constraints are given in the form Ax<=b
+(max) c = [ 4.  1.  5.  3. -0. -0. -0.]
 *********************************
 Output:
 *********************************
@@ -35,20 +36,37 @@ f_opt = 29.0
 
 Input:
 A = 
-[[1. 1.]
- [2. 3.]],
- b = [1.0, 5.0],
-(max) c = [-10. -25. -35.   0.   0.]
+[[ 1. -1. -1.  3.  1.  0.  0.]
+ [ 5.  1.  3.  8.  0.  1.  0.]
+ [-1.  2.  3. -5.  0.  0.  1.]],
+ b = [1.0, 55.0, 3.0],
+Constraints are given in the form Ax=b
+(max) c = [4. 1. 5. 3. 0. 0. 0.]
 *********************************
 Output:
 *********************************
-Initial x0 is: [0. 0. 1. 5.]
-Initial P is: [2, 3]
-Initial Q is: [0, 1]
+Initial x0 is: [ 0.  0.  0.  0.  1. 55.  3.]
+Initial P is: [4, 5, 6]
+Initial Q is: [0, 1, 2, 3]
+***********ITERATION 1***********
+Current x0 is: [ 1.  0.  0.  0.  0. 50.  4.]
+Current P is: [0, 5, 6]
+Current Q is: [1, 2, 3, 4]
+f = -0.0
+***********ITERATION 2***********
+Current x0 is: [ 5.  4.  0.  0.  0. 26.  0.]
+Current P is: [0, 1, 5]
+Current Q is: [2, 3, 4, 6]
+f = 4.0
+***********ITERATION 3***********
+Current x0 is: [ 0. 14.  0.  5.  0.  1.  0.]
+Current P is: [1, 3, 5]
+Current Q is: [0, 2, 4, 6]
+f = 23.999999999999993
 *********************************
-Optimal solution is found after 1 iterations:
-x0: [0. 0. 1. 5.]
-f_opt = 35.0
+Optimal solution is found after 4 iterations:
+x0: [ 0. 14.  0.  5.  0.  1.  0.]
+f_opt = 29.0
 
 
 
@@ -57,6 +75,7 @@ A =
 [[ 1.  1.]
  [-1.  3.]],
  b = [3.0, 5.0],
+Constraints are given in the form Ax<=b
 (min) c = [-1. -2.  0.  0.]
 *********************************
 Output:
@@ -78,6 +97,128 @@ f = -3.0
 Optimal solution is found after 3 iterations:
 x0: [1. 2. 0. 0.]
 f_opt = -5.0
+
+
+
+Input:
+A = 
+[[1. 1.]
+ [2. 3.]],
+ b = [1.0, 5.0],
+Constraints are given in the form Ax<=b
+(max) c = [10. 25. -0. -0.]
+*********************************
+Output:
+*********************************
+Initial x0 is: [0. 0. 1. 5.]
+Initial P is: [2, 3]
+Initial Q is: [0, 1]
+***********ITERATION 1***********
+Current x0 is: [1. 0. 0. 3.]
+Current P is: [0, 3]
+Current Q is: [1, 2]
+f = -0.0
+***********ITERATION 2***********
+Current x0 is: [0. 1. 0. 2.]
+Current P is: [1, 3]
+Current Q is: [0, 2]
+f = 10.0
+*********************************
+Optimal solution is found after 3 iterations:
+x0: [0. 1. 0. 2.]
+f_opt = 25.0
+
+
+
+Input:
+A = 
+[[0. 1. 0. 4.]
+ [0. 0. 1. 5.]
+ [1. 0. 0. 8.]],
+ b = [1.0, 2.0, 3.0],
+Constraints are given in the form Ax=b
+(min) c = [1. 5. 2. 9.]
+*********************************
+Output:
+*********************************
+Initial x0 is: [3. 1. 2. 0.]
+Initial P is: [0, 1, 2]
+Initial Q is: [3]
+***********ITERATION 1***********
+Current x0 is: [1.   0.   0.75 0.25]
+Current P is: [0, 2, 3]
+Current Q is: [1]
+f = 12.0
+*********************************
+Optimal solution is found after 2 iterations:
+x0: [1.   0.   0.75 0.25]
+f_opt = 4.75
+
+
+
+Input:
+A = 
+[[1. 1. 0. 1. 4. 0. 0. 9. 0.]
+ [0. 4. 0. 3. 0. 0. 1. 7. 0.]
+ [0. 5. 0. 7. 6. 0. 0. 3. 1.]
+ [0. 9. 0. 1. 9. 1. 0. 2. 0.]
+ [0. 4. 1. 3. 0. 0. 0. 1. 0.]],
+ b = [1.0, 2.0, 3.0, 4.0, 5.0],
+Constraints are given in the form Ax=b
+(min) c = [1. 2. 3. 4. 5. 6. 7. 8. 9.]
+*********************************
+Output:
+*********************************
+Initial x0 is: [1. 0. 5. 0. 0. 4. 2. 0. 3.]
+Initial P is: [0, 2, 5, 6, 8]
+Initial Q is: [1, 3, 4, 7]
+***********ITERATION 1***********
+Current x0 is: [0.55555556 0.44444444 3.22222222 0.         0.         0.
+ 0.22222222 0.         0.77777778]
+Current P is: [0, 1, 2, 6, 8]
+Current Q is: [3, 4, 5, 7]
+f = 81.0
+***********ITERATION 2***********
+Current x0 is: [0.47826087 0.43478261 3.         0.08695652 0.         0.
+ 0.         0.         0.2173913 ]
+Current P is: [0, 1, 2, 3, 8]
+Current Q is: [4, 5, 6, 7]
+f = 19.66666666666667
+***********ITERATION 3***********
+Current x0 is: [0.39215686 0.41176471 3.         0.11764706 0.01960784 0.
+ 0.         0.         0.        ]
+Current P is: [0, 1, 2, 3, 4]
+Current Q is: [5, 6, 7, 8]
+f = 12.65217391304347
+*********************************
+Optimal solution is found after 4 iterations:
+x0: [0.39215686 0.41176471 3.         0.11764706 0.01960784 0.
+ 0.         0.         0.        ]
+f_opt = 10.784313725490197
+
+
+
+Input:
+A = 
+[[ 1.  4. -2.]
+ [-1.  3.  0.]
+ [ 2.  9.  4.]
+ [ 1.  3.  7.]],
+ b = [-4.0, -2.0, -1.0, -4.0],
+Constraints are given in the form Ax>=b
+(max) c = [ 9.  2.  6. -0. -0. -0. -0.]
+*********************************
+Output:
+*********************************
+Initial x0 is: [0. 0. 0. 4. 2. 1. 4.]
+Initial P is: [3, 4, 5, 6]
+Initial Q is: [0, 1, 2]
+***********ITERATION 1***********
+Current x0 is: [2. 0. 0. 6. 0. 5. 6.]
+Current P is: [0, 3, 5, 6]
+Current Q is: [1, 2, 4]
+f = -0.0
+Problem is unlimited, f->-inf.
 
 
 

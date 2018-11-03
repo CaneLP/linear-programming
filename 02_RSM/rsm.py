@@ -1,6 +1,7 @@
 # Revised Simplex Method
 import numpy as np
 import sys
+import copy
 
 
 class FileLogger(object):
@@ -28,47 +29,65 @@ def stop_logging_to_file():
 class RSM:
     def __init__(self, a, b, c, var_num, f_opt_sign, system_form):
         self.a = a
+        self.initial_a = copy.deepcopy(a)
         self.b = b
+        self.initial_b = copy.deepcopy(b)
         self.c = c
         self.initial_var_num = var_num
         self.f_opt_sign = f_opt_sign
         self.system_form = system_form
 
+    def find_basic_feasible_solution(self):
+        x0 = np.array(np.zeros(shape=(1, self.initial_var_num)))[0]
+        # If it's in canonical form, Ax=b, find identity submatrix and assign them values of vector b respectively
+        if self.system_form == 1:
+            eye_matrices = 0
+            for j in range(self.a.shape[1]):
+                for e in range(self.a.shape[0]):
+                    if np.all(self.a[:, j] == np.eye(self.a.shape[0])[:, e]):
+                        x0[j] = self.b[e]
+                        eye_matrices += 1
+            if eye_matrices != self.a.shape[0]:
+                return np.array([-1])
+
+        # When in the form Ax<=b or Ax>=b, BFS is easily found by just adding vector b columns
+        if self.system_form == 2 or self.system_form == 3:
+            x0 = np.concatenate((x0, self.b), axis=None)
+        return x0
+
     def solve_problem(self):
         # Ax<=b, x>=0
         if self.system_form == 2:
             # Adding positive slack variables
-            # Ako je Ax<=b, dodajemo izravnavajuce promenljive za svaki red, tj za svaku nejednakost
             self.a = np.c_[self.a, np.eye(self.a.shape[0])]
         # Ax>=b, x>=0
         elif self.system_form == 3:
             # Adding negative slack variables and multiplying the system by -1
-            # Ako je Ax>=b, dodajemo izravnavajuce promenljive za svaki red, tj za svaku nejednakost.
-            # Posto je u pitanju znak >= izravnavajuce promenljive su negativne, pa mnozimo ceo sistem sa -1
-            # da bismo dobili jedinicnu matricu od tih novih promenljivih.
             self.a = np.c_[np.negative(self.a), np.eye(self.a.shape[0])]
             self.b = np.negative(self.b)
 
-        x0 = np.array(np.zeros(shape=(1, self.initial_var_num)))
-        x0 = np.concatenate((x0, self.b), axis=None)
+        x0 = self.find_basic_feasible_solution()
 
         # Check if the initial solution is feasible
-        # Ukoliko se u pocetnom bazisnom resenju x0 nalazi broj, koji je manji od nule, nije ispunjen uslov
-        # pozitivnosti resenja, pa vracamo odgovarajucu poruku i izlazimo iz algoritma.
         if np.count_nonzero(x0 < 0) > 0:
             print("System can't be solved using Revised Simplex Method.")
             return
-        # Odredjujemo inicijalne P i Q
-        p = [i for i in range(self.initial_var_num, self.a.shape[1])]
-        q = [i for i in range(self.initial_var_num)]
+        # Setting initial P and Q
+        p = [i for i in range(x0.shape[0]) if x0[i] > 0]
+        q = [i for i in range(x0.shape[0]) if x0[i] == 0]
         self.c = np.c_[self.c, np.zeros(shape=(1, self.a.shape[1]-self.initial_var_num))]
 
-        # Stampamo i input radi boljeg formatiranja output fajla
-        print("Input:\nA = \n%s,\n b = %s," % (self.a[:, :-self.initial_var_num], self.b))
+        print("Input:\nA = \n%s,\n b = %s," % (self.initial_a, self.initial_b))
+        if self.system_form == 1:
+            print("Constraints are given in the form Ax=b")
+        if self.system_form == 2:
+            print("Constraints are given in the form Ax<=b")
+        if self.system_form == 3:
+            print("Constraints are given in the form Ax>=b")
         if self.f_opt_sign == -1:
-            print("(max) c = %s" % self.c[0])
+            print("(max) c = %s" % np.negative(self.c[0, :-self.initial_var_num + 1]))
         else:
-            print("(min) c = %s" % self.c[0])
+            print("(min) c = %s" % self.c[0, :-self.initial_var_num + 1])
 
         print("*********************************")
         print("Output:")
@@ -87,20 +106,19 @@ class RSM:
             cn_p = cn - np.matmul(u, N)
 
             # Optimal solution is found if there are no negative rj values
-            # Ukoliko su svi elementi rj > 0, optimalno resenje je pronadjeno
             if np.count_nonzero(cn_p < 0) == 0:
                 print("*********************************")
                 print("Optimal solution is found after %d iterations:\nx0: %s" % (iter_num, str(x0)))
                 print("f_opt = %s" % (u.dot(self.b)*self.f_opt_sign))
                 break
 
-            # Pronalazimo odgovarajuce rj < 0
+            # Finding j for rj < 0
             j = 0
             for j in range(len(cn_p)):
                 if cn_p[j] < 0:
                     break
 
-            # Odredjujemo y, pa pravimo x(t) - cuvamo u vektoru t
+            # Determining vectors y and parametric t vector
             y = np.zeros(shape=(1, self.a.shape[1]))
             y[:, p] = np.linalg.solve(B, self.a[:, q[j]])
             t = np.zeros(shape=(1, self.a.shape[1]))[0]
@@ -113,12 +131,12 @@ class RSM:
                 elif elem in q:
                     t[elem] = 0
 
-            # Ukoliko su svi yp, p pripada P, nepozitivni, funkcija cilja neograniceno opada ka -inf
+            # If all yp <= 0, function is unlimited
             if np.count_nonzero(y[0] > 0) == 0:
                 print("Problem is unlimited, f->-inf.")
                 return
 
-            # Odredjujemo optimalno t, t kapa
+            # Calculating optimal t, t_kappa
             t_mins = []
             for i in range(len(t)):
                 if i in p and y[0][i] > 0 and x0[i]*y[0][i] > 0:
@@ -127,16 +145,16 @@ class RSM:
 
             prod = t_min*y
 
-            # Biramo l takvo da je xl - tkapa*yl > 0
+            # Choose l so that the xl - tkapa*yl > 0
             l = 0
             for l in range(len(x0)):
                 if x0[l] != 0:
-                    if x0[l] - prod[0][l] == 0 and y[0][l] > 0:
+                    epsilon = 1e-10
+                    if abs(x0[l] - prod[0][l]) <= epsilon and y[0][l] > 0:
                         break
             x0 = x0+t*t_min
             x0[l] = 0
 
-            # Azuriramo skupove P i Q, koji sadrze bazisne, odnosno nebazisne kolone
             p.remove(l)
             p.append(q[j])
             q.remove(q[j])
@@ -144,7 +162,6 @@ class RSM:
             p.sort()
             q.sort()
 
-            # Stampamo trenutne vrednosti
             print("***********ITERATION %s***********" % iter_num)
             iter_num += 1
             print("Current x0 is: %s" % str(x0))
