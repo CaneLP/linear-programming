@@ -43,6 +43,7 @@ class TPSM:
         self.f_opt_sign = f_opt_sign
         self.inequalities = inequalities
         self.artificial_var_num = 0
+        self.slack_var_num = 0
 
     def solve_problem(self):
         if not self.phase_one_simplex():
@@ -102,7 +103,7 @@ class TPSM:
             self.a = np.c_[self.a, col_to_add]
             num_of_slack_vars += 1
             col_to_add[i][0] = 0
-
+        self.slack_var_num = self.a.shape[1] - self.initial_var_num
         # Adding artificial variables
         # Dodavanje vestackih promenljivih
         artificial_var_rows = []
@@ -160,7 +161,6 @@ class TPSM:
             for e in range(self.a.shape[0]):
                 if np.all(self.a[:, j] != np.eye(self.a.shape[0])[:, e]):
                     self.a[:, j] = np.zeros(shape=(self.a.shape[0], 1))[0]
-                    self.artificial_var_num -= 1
 
         self.a = self.a[:, ~np.all(self.a == 0, axis=0)]
 
@@ -171,13 +171,11 @@ class TPSM:
             for e in range(self.a.shape[0]):
                 if np.all(self.a[:, j] == np.eye(self.a.shape[0])[:, e]):
                     eye_matrices_pos.append([(np.where(self.a[:, j] == 1)[0][0]), j])
-        if len(eye_matrices_pos) != self.a.shape[0]:
-            return False
+        # if len(eye_matrices_pos) != self.a.shape[0]:
+        #     return False
 
         # Add row for initial f
         # Dodavanje reda funkcije ciji optimum trazimo
-        print(self.a.shape[1] - len(self.c))
-        print(self.a.shape[1])
         self.a = np.r_[self.a, np.c_[[self.c], np.zeros(shape=(1, self.a.shape[1] - len(self.c)))]]
 
         print(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
@@ -188,9 +186,10 @@ class TPSM:
         for eye_pos in eye_matrices_pos:
             self.b[-1] -= (self.b[eye_pos[0]] * self.a[-1][eye_pos[1]])
             self.a[-1] -= (self.a[eye_pos[0]] * self.a[-1][eye_pos[1]])
-
+        # print(self.artificial_var_num)
         # Izbaci sve vestacke
-        for i in range(self.initial_var_num, self.a.shape[1]):
+
+        while self.a.shape[1] > self.initial_var_num + self.slack_var_num:
             row_one = np.where(self.a[:, -1] == 1)[0][0]
             # Kada su u vrsti sve nule
             if np.count_nonzero(self.a[row_one] == 0) == (self.a.shape[1] - 1):
@@ -199,34 +198,50 @@ class TPSM:
                 self.b = np.delete(self.b, row_one, 0)
             # Kada nisu sve nule
             else:
-                pass
-
+                for i in range(self.a.shape[0]):
+                    for j in range(self.initial_var_num + self.slack_var_num, self.a.shape[1]):
+                        if self.a[i][j] == 1:
+                            column_r = np.where(self.a[i] != 0)
+                            pivot = self.a[i][column_r[0][0]]
+                            col = column_r[0][0]
+                            print(i)
+                            print(col)
+                            print(pivot)
+                            for k in range(self.a.shape[0]):
+                                for m in range(self.a.shape[1]):
+                                    if k != i and m != col:
+                                        self.a[k][m] -= self.a[i][m] * self.a[k][col] / pivot
+                            for o in range(len(self.b)):
+                                if o != i:
+                                    self.b[o] -= self.b[i] * self.a[o][col] / pivot
+                            self.b[i] = self.b[i] / pivot
+                            self.a[i, :] = np.divide(self.a[i, :], pivot)
+                            for k in range(self.a.shape[0]):
+                                if k != i:
+                                    self.a[k][col] = 0
+                        self.a = np.delete(self.a, j, 1)
+                        print(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
+                        print()
+                        break
         print(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
         print()
 
         self.tableau_method()
 
-        # self.a = self.a[:, :-self.artificial_var_num]
-        # # Searching for an identity matrix
-        # # Potraga za jedinicnom matricom
-        # eye_matrices_pos = []
-        # for j in range(self.a.shape[1]):
-        #     for e in range(self.a.shape[0]):
-        #         if np.all(self.a[:, j] == np.eye(self.a.shape[0])[:, e]):
-        #             eye_matrices_pos.append([(np.where(self.a[:, j] == 1)[0][0]), j])
-        # if len(eye_matrices_pos) != self.a.shape[0]:
-        #     return False
-        # # Add row for initial f
-        # # Dodavanje reda funkcije ciji optimum trazimo
-        # self.a = np.r_[self.a, self.c]
-        #
-        # for eye_pos in eye_matrices_pos:
-        #     self.a[-1] += (self.a[eye_pos[0]] * self.a[eye_pos[1]])
-        #
-        # print(self.a)
-        #
-        #
-        # print(self.a)
+        # Searching for an identity matrix for optimal solution
+        # Potraga za jedinicnom matricom za optimalno resenje
+        eye_matrices_pos = []
+        for j in range(self.a.shape[1]):
+            for e in range(self.a.shape[0]):
+                if np.all(self.a[:, j] == np.eye(self.a.shape[0])[:, e]):
+                    eye_matrices_pos.append([(np.where(self.a[:, j] == 1)[0][0]), j])
+
+        x0 = np.zeros(shape=(1, self.a.shape[1]))
+        for eye_pos in eye_matrices_pos:
+            x0[0][eye_pos[1]] = self.b[eye_pos[0]]
+
+        print("Optimal solution is: ")
+        print(x0)
 
 
 def main():
@@ -237,6 +252,7 @@ def main():
     while ans == 'y':
         np.set_printoptions(suppress=True)
         stop_logging_to_file()
+
         # todo begin
         # rows = int(input("Enter number of rows in the matrix A: "))
         # columns = int(input("Enter number of columns in the matrix A: "))
@@ -280,30 +296,40 @@ def main():
         # columns = 4
         # matrix_a = np.array([[0, -1, -1, 1], [2, 0, 2, 4], [1, 1, 2, 1]])
         # b = [[3, 12, 3]]
-        # c = [2, 0, 3, 1]
+        # c = [[2, 0, 3, 1]]
         # inequalities = [0, 0, 0]
         # f_opt_sign = 1
 
-        # rows = 4
-        # columns = 3
-        # matrix_a = np.array([[1, 3, 1], [3, 1, -1], [3, 1, 3], [1, 0, 0]])
-        # b = [[10, 2, 6, 1]]
-        # c = [-3, -1, -4]
-        # inequalities = [RelationSymbols.less, RelationSymbols.greater, RelationSymbols.less, RelationSymbols.less]
-        # f_opt_sign = -1
+        rows = 4
+        columns = 3
+        matrix_a = np.array([[1, 3, 1], [3, 1, -1], [3, 1, 3], [1, 0, 0]])
+        b = [[10, 2, 6, 1]]
+        c = [[-3, -1, -4]]
+        inequalities = [RelationSymbols.less, RelationSymbols.greater, RelationSymbols.less, RelationSymbols.less]
+        f_opt_sign = -1
 
-        rows = 5
-        columns = 9
-        matrix_a = np.array([[1, 1, 0, 1, 4, 0, 0, 9, 0],
-                             [0, 4, 0, 3, 0, 0, 1, 7, 0],
-                             [0, 5, 0, 7, 6, 0, 0, 3, 1],
-                             [0, 9, 0, 1, 9, 1, 0, 2, 0],
-                             [0, 4, 1, 3, 0, 0, 0, 1, 0]])
-        b = [[1, 2, 3, 4, 5]]
-        c = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-        inequalities = [RelationSymbols.equals, RelationSymbols.equals, RelationSymbols.equals,
-                        RelationSymbols.equals, RelationSymbols.equals]
-        f_opt_sign = 1
+        # rows = 5
+        # columns = 9
+        # matrix_a = np.array([[1, 1, 0, 1, 4, 0, 0, 9, 0],
+        #                      [0, 4, 0, 3, 0, 0, 1, 7, 0],
+        #                      [0, 5, 0, 7, 6, 0, 0, 3, 1],
+        #                      [0, 9, 0, 1, 9, 1, 0, 2, 0],
+        #                      [0, 4, 1, 3, 0, 0, 0, 1, 0]])
+        # b = [[1, 2, 3, 4, 5]]
+        # c = [[1, 2, 3, 4, 5, 6, 7, 8, 9]]
+        # inequalities = [RelationSymbols.equals, RelationSymbols.equals, RelationSymbols.equals,
+        #                 RelationSymbols.equals, RelationSymbols.equals]
+        # f_opt_sign = 1
+
+        # rows = 5
+        # columns = 9
+        # matrix_a = np.array([[0, 1, 0, 4],
+        #                      [0, 0, 1, 5],
+        #                      [1, 0, 0, 8]])
+        # b = [[1, 2, 3]]
+        # c = [[1, 5, 2, 9]]
+        # inequalities = [RelationSymbols.equals, RelationSymbols.equals, RelationSymbols.equals]
+        # f_opt_sign = 1
 
         problem = TPSM(matrix_a, b[0], c[0], inequalities, columns, f_opt_sign)
         start_logging_to_file(output_file, mode)
