@@ -38,6 +38,7 @@ class Dual:
         self.a = a
         self.initial_a = copy.deepcopy(a)
         self.b = b
+        self.initial_b = copy.deepcopy(self.b)
         self.c = c
         self.initial_var_num = var_num
         self.f_opt_sign = f_opt_sign
@@ -48,6 +49,8 @@ class Dual:
     def solve_problem(self):
         # Adding slack variables
         # Dodavanje izravnavajucih promenljivih
+        print("Procedure of solving the problem: ")
+        print()
         print(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
         print()
         num_of_slack_vars = 0
@@ -74,7 +77,9 @@ class Dual:
         print(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
         print()
 
+        # Izvrsava se dok ima negativnih b
         while np.count_nonzero(np.array([self.b]) < 0) != 0:
+            # Ukoliko su svi b pozitivni, pronadjeno je optimalno resenje
             if np.count_nonzero(np.array([self.b[:-1]]) < 0) == 0:
                 # Searching for an identity matrix for optimal solution
                 # Potraga za jedinicnom matricom za optimalno resenje
@@ -88,26 +93,44 @@ class Dual:
                 for eye_pos in eye_matrices_pos:
                     x0[0][eye_pos[1]] = self.b[eye_pos[0]]
 
+                print("******************************")
+                print("Input:")
+                if self.f_opt_sign == -1:
+                    print("(max) c = %s" % np.negative(self.c))
+                else:
+                    print("(min) c = %s" % self.c)
+                print("subject to: ")
+                for i in range(self.initial_a.shape[0]):
+                    print(self.initial_a[i], end="")
+                    if self.inequalities[i] == RelationSymbols.greater:
+                        print(" >= ", end="")
+                    elif self.inequalities[i] == RelationSymbols.less:
+                        print(" <= ", end="")
+                    elif self.inequalities[i] == RelationSymbols.equals:
+                        print(" = ", end="")
+                    print(self.initial_b[i])
+                if self.blend != "y":
+                    print("Blend's rule was not used!")
+                else:
+                    print("Blend's rule was used!")
+                print("******************************")
                 print("Optimal solution is: ")
                 print(x0)
-                print("min_f: %s" % -self.b[-1])
+                if self.f_opt_sign == -1:
+                    print("max_f: %s" % self.b[-1])
+                else:
+                    print("min_f: %s" % str(-self.b[-1]))
+                print("******************************")
                 return
 
-            # Blendovo pravilo, uvek se bira prvi po redu, koji ispunjava uslov
-            # Na primer, izaberimo poslednji koji ispunjava uslov, ukoliko ova opcija nije izabrana
-            # Biramo poslednje negativno b
-            if self.blend != "y":
-                options = []
-                for i in range(len(self.b) - 1):
-                    if self.b[i] < 0:
-                        options.append(i)
-                i = options[0]
-            else:
-                for i in range(len(self.b) - 1):
-                    if self.b[i] < 0:
-                        break
-
+            # Trazimo red sa negativnim b
+            for i in range(len(self.b) - 1):
+                if self.b[i] < 0:
+                    break
+            # Ukoliko su svi clanovi matrice a tog reda nenegativni, ne postoji resenje, koje zadovoljava
+            # sva ogranicenja
             if np.count_nonzero(self.a[i] >= 0) == self.a.shape[1]:
+                self.print_input()
                 print("Infeasible.")
                 return
 
@@ -140,6 +163,7 @@ class Dual:
 
             print(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
             print()
+        print("\n\n")
 
 
 def main():
@@ -152,47 +176,38 @@ def main():
         np.set_printoptions(suppress=True)
         stop_logging_to_file()
 
-        # rows = int(input("Enter number of rows in the matrix A: "))
-        # columns = int(input("Enter number of columns in the matrix A: "))
-        #
-        # matrix_a = []
-        # inequalities = []
-        # print("Enter the %s x %s matrix A one row by one and (in)equality signs when asked: " % (rows, columns))
-        # for i in range(rows):
-        #     print("Row %d: " % (i + 1))
-        #     matrix_a.append(list(map(float, input().rstrip().split())))
-        #     c = input("Choose (in)equality type (<=, >=, =): ")
-        #     if c == "<=":
-        #         inequalities.append(RelationSymbols.less)
-        #     elif c == ">=":
-        #         inequalities.append(RelationSymbols.greater)
-        #     elif c == "=":
-        #         inequalities.append(RelationSymbols.equals)
-        #
-        # b = []
-        # print("Enter the b vector of length %s: " % rows)
-        # b.append(list(map(float, input().rstrip().split())))
-        #
-        # matrix_a = np.array(matrix_a)
-        #
-        # c = []
-        # print("Enter vector c, which will be optimized: ")
-        # c.append(list(map(float, input().rstrip().split())))
-        # opt = input("Optimization (min/max)? ")
-        # f_opt_sign = 1
-        # if opt == "max":
-        #     f_opt_sign = -1
-        #     c = np.negative(c)
-        # blend = input("Use Blends rule (y/n): ")
+        rows = int(input("Enter number of rows in the matrix A: "))
+        columns = int(input("Enter number of columns in the matrix A: "))
 
-        rows = 3
-        columns = 3
-        matrix_a = np.array([[2, -1, -1], [1, 2, 1], [-1, 1, -2]])
-        b = [[0, 3, -4]]
-        c = [[7, 4, 1]]
-        inequalities = [RelationSymbols.greater, RelationSymbols.greater, RelationSymbols.greater]
+        matrix_a = []
+        inequalities = []
+        print("Enter the %s x %s matrix A one row by one and (in)equality signs when asked: " % (rows, columns))
+        for i in range(rows):
+            print("Row %d: " % (i + 1))
+            matrix_a.append(list(map(float, input().rstrip().split())))
+            c = input("Choose (in)equality type (<=, >=, =): ")
+            if c == "<=":
+                inequalities.append(RelationSymbols.less)
+            elif c == ">=":
+                inequalities.append(RelationSymbols.greater)
+            elif c == "=":
+                inequalities.append(RelationSymbols.equals)
+
+        b = []
+        print("Enter the b vector of length %s: " % rows)
+        b.append(list(map(float, input().rstrip().split())))
+
+        matrix_a = np.array(matrix_a)
+
+        c = []
+        print("Enter vector c, which will be optimized: ")
+        c.append(list(map(float, input().rstrip().split())))
+        opt = input("Optimization (min/max)? ")
         f_opt_sign = 1
-        blend = "n"
+        if opt == "max":
+            f_opt_sign = -1
+            c = np.negative(c)
+        blend = input("Use Blends rule (y/n): ")
 
         problem = Dual(matrix_a, b[0], c[0], inequalities, columns, f_opt_sign, blend)
         start_logging_to_file(output_file, mode)
