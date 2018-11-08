@@ -111,7 +111,7 @@ class Dual:
             max_col = 0
             maximum = float('-inf')
             for j in range(len(self.c)):
-                if self.a[i][j] < 0 and (self.a[-1][j] / self.a[i][j]) >= maximum:
+                if self.a[i][j] < 0 and (self.a[-1][j] / self.a[i][j]) > maximum:
                     maximum = self.a[-1][j] / self.a[i][j]
                     max_col = j
 
@@ -236,13 +236,26 @@ def main():
         # inequalities = [RelationSymbols.less, RelationSymbols.greater, RelationSymbols.less, RelationSymbols.less]
         # f_opt_sign = -1
 
-        rows = 3
-        columns = 3
-        matrix_a = np.array([[2, -1, -1], [1, 2, 1], [-1, 1, -2]])
-        b = [[0, 3, -4]]
-        c = [[7, 4, 1]]
-        inequalities = [RelationSymbols.greater, RelationSymbols.greater, RelationSymbols.greater]
-        f_opt_sign = 1
+        # rows = 3
+        # columns = 3
+        # matrix_a = np.array([[2, -1, -1], [1, 2, 1], [-1, 1, -2]])
+        # b = [[0, 3, -4]]
+        # c = [[7, 4, 1]]
+        # inequalities = [RelationSymbols.greater, RelationSymbols.greater, RelationSymbols.greater]
+        # f_opt_sign = 1
+
+        # rows = 5
+        # columns = 9
+        # matrix_a = np.array([[1, 1, 0, 1, 4, 0, 0, 9, 0],
+        #                      [0, 4, 0, 3, 0, 0, 1, 7, 0],
+        #                      [0, 5, 0, 7, 6, 0, 0, 3, 1],
+        #                      [0, 9, 0, 1, 9, 1, 0, 2, 0],
+        #                      [0, 4, 1, 3, 0, 0, 0, 1, 0]])
+        # b = [[1, 2, 3, 4, 5]]
+        # c = [[1, 2, 3, 4, 5, 6, 7, 8, 9]]
+        # inequalities = [RelationSymbols.equals, RelationSymbols.equals, RelationSymbols.equals,
+        #                 RelationSymbols.equals, RelationSymbols.equals]
+        # f_opt_sign = 1
 
         # rows = 2
         # columns = 3
@@ -251,6 +264,22 @@ def main():
         # c = [[2, 4, 3]]
         # inequalities = [RelationSymbols.less, RelationSymbols.greater]
         # f_opt_sign = 1
+
+        # rows = 3
+        # columns = 2
+        # matrix_a = np.array([[3, 1], [4, 3], [1, 2]])
+        # b = [[3, 6, 3]]
+        # c = [[2, 1]]
+        # inequalities = [RelationSymbols.greater, RelationSymbols.greater, RelationSymbols.less]
+        # f_opt_sign = 1
+
+        rows = 3
+        columns = 3
+        matrix_a = np.array([[3, 2, 1], [2, 3, 3], [1, 1, -1]])
+        b = [[10, 15, 4]]
+        c = [[2, 3, 4]]
+        inequalities = [RelationSymbols.less, RelationSymbols.less, RelationSymbols.greater]
+        f_opt_sign = -1
 
         # rows = 2
         # columns = 3

@@ -300,12 +300,28 @@ def main():
         # inequalities = [0, 0, 0]
         # f_opt_sign = 1
 
-        rows = 4
+        # rows = 4
+        # columns = 3
+        # matrix_a = np.array([[1, 3, 1], [3, 1, -1], [3, 1, 3], [1, 0, 0]])
+        # b = [[10, 2, 6, 1]]
+        # c = [[-3, -1, -4]]
+        # inequalities = [RelationSymbols.less, RelationSymbols.greater, RelationSymbols.less, RelationSymbols.less]
+        # f_opt_sign = -1
+
+        # rows = 3
+        # columns = 2
+        # matrix_a = np.array([[3, 1], [4, 3], [1, 2]])
+        # b = [[3, 6, 3]]
+        # c = [[2, 1]]
+        # inequalities = [RelationSymbols.greater, RelationSymbols.greater, RelationSymbols.less]
+        # f_opt_sign = 1
+
+        rows = 3
         columns = 3
-        matrix_a = np.array([[1, 3, 1], [3, 1, -1], [3, 1, 3], [1, 0, 0]])
-        b = [[10, 2, 6, 1]]
-        c = [[-3, -1, -4]]
-        inequalities = [RelationSymbols.less, RelationSymbols.greater, RelationSymbols.less, RelationSymbols.less]
+        matrix_a = np.array([[3, 2, 1], [2, 3, 3], [1, 1, -1]])
+        b = [[10, 15, 4]]
+        c = [[2, 3, 4]]
+        inequalities = [RelationSymbols.less, RelationSymbols.less, RelationSymbols.greater]
         f_opt_sign = -1
 
         # rows = 5
