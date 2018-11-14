@@ -80,28 +80,76 @@ class TP:
                 indicator[p] = -1
             else:
                 indicator[:, q] = -1
-            # print()
-            # print(minimum_c)
-            # print(p, q)
-            # print("c")
-            # print(self.c)
-            # print("a")
-            # print(a)
-            # print("b")
-            # print(b)
-            # print("x")
-            # print(x)
-            # print(indicator)
-            # print("next")
+
             if a[p] == b[q]:
                 break
 
         return x
 
-    def find_theta_cycle(self, theta):
-        
+    # Positions in the matrix are encoded with a number whose digits represent positions, a = ij (4: i = 0, j = 4)
+    def calculate_adjacency_list(self):
+        adj_list = {}
+        for i in range(self.x.shape[0]):
+            for j in range(self.x.shape[1]):
+                if self.x[i][j] != 0:
+                    row_neighbours = [(i * 10 + k) for k in range(self.x.shape[1]) if self.x[i][k] != 0 and k != j]
+                    col_neighbours = [(k * 10 + j) for k in range(self.x.shape[0]) if self.x[k][j] != 0 and k != i]
+                    adj_list[i * 10 + j] = row_neighbours + col_neighbours
 
-        return theta
+        return adj_list
+
+    # Returns encoded values of positions where theta or theta negative should be added. Using DFS for cycle searching
+    @staticmethod
+    def find_theta_cycle(adj_list, marked, start):
+        path = [start]
+        marked[start] = True
+        while len(path) > 0:
+            v = path[-1]
+
+            if v == start and len(path) > 3:
+                return path
+
+            has_unvisited = False
+
+            for w in adj_list[v]:
+                available = True
+                # Disable stepping over already selected basic variable.
+                wi = int(w / 10)
+                wj = w % 10
+                vi = int(v / 10)
+                vj = v % 10
+                for p in path:
+                    if p != v and p != w:
+                        pi = int(p / 10)
+                        pj = p % 10
+                        if ((vi == pi == wi and (vj < pj < wj or wj < pj < vj)) or
+                           (vj == pj == wj and (wi < pi < vi or vi < pi < wi))) and w not in marked:
+                            # print("v")
+                            # print(v)
+                            # print("p")
+                            # print(p)
+                            # print("w")
+                            # print(w)
+                            # print()
+                            available = False
+                if len(path) > 1:
+                    p = path[-2]
+                    pi = int(p / 10)
+                    pj = p % 10
+                    if ((vi == pi == wi and (vj < wj < pj or pj < wj < vj)) or
+                       (vj == pj == wj and (pi < wi < vi or vi < wi < pi))) and w not in marked:
+                        available = False
+
+                if available and ((w == start and len(path) > 3 and len(path) % 2 == 0) or w not in marked):
+                    path.append(w)
+                    marked[w] = True
+                    has_unvisited = True
+                    break
+
+            if not has_unvisited:
+                path.pop()
+
+        return []
 
     def method_of_potentials(self):
         # Determining the row/column with maximum number of basic variables
@@ -141,14 +189,6 @@ class TP:
                         if self.x[i][j] != 0 and u[i] == np.inf:
                             u[i] = self.c[i][j] - v[j]
 
-        # print("u")
-        # print(u)
-        # print("v")
-        # print(v)
-
-        # print(i, max_basic_i)
-        # print(j, max_basic_j)
-
         # Finding smallest value less than zero: c(non-basic)_i,j - (u_i + v_j).
         # If all greater than or equal zero, optimal solution is found
         neg_values = []
@@ -169,13 +209,27 @@ class TP:
         theta = np.zeros(shape=(self.c.shape[0], self.c.shape[1]))
         pos_i = sorted(neg_values)[0][1][0]
         pos_j = sorted(neg_values)[0][1][1]
+        # theta[pos_i][pos_j] = 1
+        self.x[pos_i][pos_j] = 1
+        adjacency_list = self.calculate_adjacency_list()
+        self.x[pos_i][pos_j] = 0
+
+        print(adjacency_list)
+        marked = {}
+        start = pos_i * 10 + pos_j
+        positions = TP.find_theta_cycle(adjacency_list, marked, start)[:-1]
+        print(positions)
+        sign = -1
+        # Decode values and fill theta matrix
+        for pos in positions:
+            sign *= -1
+            i = int(pos / 10)
+            j = pos % 10
+            theta[i][j] = sign
         theta[pos_i][pos_j] = 1
-        theta = self.find_theta_cycle(theta)
-
-        # print(pos_i, pos_j)
+        print(pos_i, pos_j)
         # print(sorted(neg_values))
-        # print(theta)
-
+        print(theta)
 
     def solve_problem(self):
         print("Initial solution found using minimum-cost method: \n%s" % self.x)
@@ -231,6 +285,9 @@ def main():
         num_shops = 5
         a = np.array([28, 13, 19, 18])
         b = np.array([24, 16, 10, 20, 22])
+        # matrix_c = np.array([[1, 0, 0, 0, 0], [4, 2, 0, 1, 4], [4, 5, 6, 2, 0], [0, 0, 0, 1, 0]])
+        # matrix_c = np.array([[1, 0, 5, 6, 9], [4, 2, 7, 9, 4], [14, 25, 16, 21, 5], [3, 4, 2, 6, 1]])
+        # matrix_c = np.array([[1, 2, 3, 4, 5], [14, 12, 10, 11, 24], [34, 15, 6, 2, 7], [8, 8, 9, 1, 2]])
         matrix_c = np.array([[3, 9, 8, 10, 4], [6, 10, 3, 2, 3], [3, 2, 7, 10, 3], [3, 2, 3, 2, 8]])
 
         problem = TP(num_storages, num_shops, a, b, matrix_c)
