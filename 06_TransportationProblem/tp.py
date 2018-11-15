@@ -28,7 +28,7 @@ def stop_logging_to_file():
     sys.stdout = sys.stdout.terminal
 
 
-def print_matrix(mat, fmt="g"):
+def mprint(mat, fmt="g"):
     col_maxes = [max([len(("{:"+fmt+"}").format(x)) for x in col]) for col in mat.T]
     for x in mat:
         for i, y in enumerate(x):
@@ -228,7 +228,7 @@ class TP:
                 print("***********************************")
                 print("Matrix X containing basic variables - amount of merchandise being transported\n"
                       "from i-th storage to j-th shop:")
-                print_matrix(self.x)
+                mprint(self.x)
                 result = 0
                 for i in range(self.m):
                     for j in range(self.n):
@@ -273,16 +273,16 @@ class TP:
             print("Matrix C (transportation cost from i-th storage to j-th shop),\n"
                   "vector A (amount of merchandise in i-th storage), on the right\n"
                   "and vector B (demand of j-th shop), at the bottom:")
-            print_matrix(full_matrix)
-            print_matrix(np.array([self.b]))
+            mprint(full_matrix)
+            mprint(np.array([self.b]))
             theta *= theta_min
             print("Cycle starting from position (%i, %i): " % (pos_i, pos_j))
-            print_matrix(theta)
+            mprint(theta)
             print("theta = %s" % theta_min)
             self.x -= -theta
             print("Matrix X containing basic variables - amount of merchandise being transported\n"
                   "from i-th storage to j-th shop:")
-            print_matrix(self.x)
+            mprint(self.x)
 
             iteration += 1
 
@@ -294,15 +294,15 @@ class TP:
         print("Matrix C (transportation cost from i-th storage to j-th shop),\n"
               "vector A (amount of merchandise in i-th storage), on the right\n"
               "and vector B (demand of j-th shop), at the bottom: ")
-        print_matrix(full_matrix)
-        print_matrix(np.array([self.b]))
+        mprint(full_matrix)
+        mprint(np.array([self.b]))
         print("\n\n")
         print("***********************************")
         print("Initial solution found using minimum-cost method:")
         print("***********************************")
         print("Matrix X containing basic variables - amount of merchandise being transported\n"
               "from i-th storage to j-th shop: \n")
-        print_matrix(self.x)
+        mprint(self.x)
         self.method_of_potentials()
 
 
@@ -313,60 +313,25 @@ def main():
     ans = 'y'
     while ans == 'y':
         stop_logging_to_file()
-        # num_storages = int(input("Enter number of storages: "))
-        # num_shops = int(input("Enter number of shops: "))
-        #
-        # a = []
-        # print("Enter the a vector of length %s which contains quantity of merchandise in i-th storage: " % num_storages)
-        # a.append(list(map(float, input().rstrip().split())))
-        #
-        # b = []
-        # print("Enter the b vector of length %s which contains demand of j-th shop: " % num_shops)
-        # b.append(list(map(float, input().rstrip().split())))
-        #
-        # matrix_c = []
-        # print("Enter the %s x %s matrix C which contains transportation cost "
-        #       "from i-th storage to j-th shop: " % (num_storages, num_shops))
-        # for i in range(num_storages):
-        #     matrix_c.append(list(map(float, input().rstrip().split())))
-        # matrix_c = np.array(matrix_c)
+        num_storages = int(input("Enter number of storages: "))
+        num_shops = int(input("Enter number of shops: "))
 
-        # print(num_storages)
-        # print(num_shops)
-        # print(a)
-        # print(b)
-        # print(matrix_c)
-        # print(matrix_x)
+        a = []
+        print("Enter the a vector of length %s which contains quantity of merchandise in i-th storage: " % num_storages)
+        a.append(list(map(float, input().rstrip().split())))
 
-        # num_storages = 3
-        # num_shops = 4
-        # a = np.array([100, 200, 100])
-        # b = np.array([80, 120, 150, 50])
-        # matrix_c = np.array([[5, 4, 8, 3], [4, 7, 4, 5], [5, 3, 6, 1]])
+        b = []
+        print("Enter the b vector of length %s which contains demand of j-th shop: " % num_shops)
+        b.append(list(map(float, input().rstrip().split())))
 
-        # num_storages = 2
-        # num_shops = 3
-        # a = np.array([6, 4])
-        # b = np.array([2, 3, 5])
-        # matrix_c = np.array([[6, 4, 1], [3, 5, 2]])
-
-        # num_storages = 5
-        # num_shops = 7
-        # a = np.array([7.0, 6.0, 4.0, 4.0, 2.0])
-        # b = np.array([6.5, 2.9, 2.5, 2.8, 2.7, 2.6, 3])
-        # matrix_c = np.array([[65, 68, 148, 9, 146, 70, 87], [168, 99, 41, 89, 99, 43, 185],
-        #                      [122, 58, 91, 48, 89, 48, 144], [109, 40, 142, 105, 72, 146, 188],
-        #                      [95, 172, 252, 113, 250, 169, 45]], dtype=float)
-        num_storages = 4
-        num_shops = 5
-        a = np.array([28, 13, 19, 18])
-        b = np.array([24, 16, 10, 20, 22])
-        # matrix_c = np.array([[1, 0, 0, 0, 0], [4, 2, 0, 1, 4], [4, 5, 6, 2, 0], [0, 0, 0, 1, 0]])
-        # matrix_c = np.array([[1, 8, 5, 6, 9], [4, 2, 7, 9, 4], [14, 25, 16, 21, 5], [3, 4, 2, 6, 1]])
-        matrix_c = np.array([[1, 2, 3, 4, 5], [14, 12, 10, 11, 24], [34, 15, 6, 2, 7], [8, 8, 9, 1, 2]])
-        # matrix_c = np.array([[3, 9, 8, 10, 4], [6, 10, 3, 2, 3], [3, 2, 7, 10, 3], [3, 2, 3, 2, 8]])
-
-        problem = TP(num_storages, num_shops, a, b, matrix_c)
+        matrix_c = []
+        print("Enter the %s x %s matrix C which contains transportation cost "
+              "from i-th storage to j-th shop: " % (num_storages, num_shops))
+        for i in range(num_storages):
+            matrix_c.append(list(map(float, input().rstrip().split())))
+        matrix_c = np.array(matrix_c)
+        
+        problem = TP(num_storages, num_shops, a[0], b[0], matrix_c)
         start_logging_to_file(output_file, mode)
         problem.solve_problem()
         stop_logging_to_file()
