@@ -28,6 +28,14 @@ def stop_logging_to_file():
     sys.stdout = sys.stdout.terminal
 
 
+def print_matrix(mat, fmt="g"):
+    col_maxes = [max([len(("{:"+fmt+"}").format(x)) for x in col]) for col in mat.T]
+    for x in mat:
+        for i, y in enumerate(x):
+            print(("{:"+str(col_maxes[i])+fmt+"}").format(y), end="   ")
+        print("")
+
+
 class TP:
     def __init__(self, num_storages, num_shops, a, b, matrix_c):
         self.m = num_storages
@@ -53,11 +61,13 @@ class TP:
         sum_a = np.sum(self.a)
         sum_b = np.sum(self.b)
         if sum_a < sum_b:
-            row_to_add = np.full((1, self.c.shape[1]), int(np.mean(self.c)) * 10)
+            row_to_add = np.zeros(shape=(1, self.c.shape[1]))
+            # row_to_add = np.full((1, self.c.shape[1]), int(np.mean(self.c)) * 10)
             self.c = np.r_[self.c, row_to_add]
             self.a = np.append(self.a, [sum_b - sum_a])
         elif sum_a > sum_b:
-            col_to_add = np.full((1, self.c.shape[0]), int(np.mean(self.c)) * 10)
+            col_to_add = np.zeros(shape=(1, self.c.shape[1]))
+            # col_to_add = np.full((1, self.c.shape[0]), int(np.mean(self.c)) * 10)
             self.c = np.c_[self.c, col_to_add.transpose()]
             self.b = np.append(self.b, [sum_a - sum_b])
 
@@ -79,11 +89,10 @@ class TP:
                         p = i
                         q = j
                         minimum_c = self.c[p][q]
-
             min_ab = min(a[p], b[q])
             x[p][q] = min_ab
-            a[p] -= min_ab
-            b[q] -= min_ab
+            b[q] = b[q] - min_ab
+            a[p] = a[p] - min_ab
 
             if a[p] == 0:
                 indicator[p] = -1
@@ -191,8 +200,6 @@ class TP:
                 v[j] = 0
 
             while np.any(u == np.inf) or np.any(v == np.inf):
-                # print(u)
-                # print(v)
                 for i in range(len(u)):
                     if u[i] != np.inf:
                         for j in range(len(v)):
@@ -221,13 +228,13 @@ class TP:
                 print("***********************************")
                 print("Matrix X containing basic variables - amount of merchandise being transported\n"
                       "from i-th storage to j-th shop:")
-                print(self.x)
+                print_matrix(self.x)
                 result = 0
                 for i in range(self.m):
                     for j in range(self.n):
                         if self.x[i][j] != 0:
                             result += self.x[i][j] * self.c[i][j]
-                print("min = %s" % result)
+                print("min = %s\n\n\n" % result)
                 break
 
             # Positioning theta on the smallest negative value. Creating cycle - start from theta position, go
@@ -240,13 +247,8 @@ class TP:
             adjacency_list = self.calculate_adjacency_list()
             self.x[pos_i][pos_j] = 0
 
-            # print(pos_i, pos_j)
-
             marked = {}
             start = pos_i * 10 + pos_j
-            # print(adjacency_list)
-            print(start)
-            print(self.x)
             positions = TP.find_theta_cycle(adjacency_list, marked, start)[:-1]
             sign = -1
             # Decode values and fill theta matrix
@@ -258,9 +260,6 @@ class TP:
 
             indexes = np.nonzero(theta == -1)
             theta_min = np.inf
-            print("positions")
-            print(positions)
-            # print(indexes)
             for i in range(len(indexes[0])):
                 curr_theta = self.x[indexes[0][i]][indexes[1][i]]
                 if curr_theta < theta_min:
@@ -273,15 +272,17 @@ class TP:
             full_matrix = np.c_[self.c, self.a]
             print("Matrix C (transportation cost from i-th storage to j-th shop),\n"
                   "vector A (amount of merchandise in i-th storage), on the right\n"
-                  "and vector B (demand of j-th shop), at the bottom: \n%s\n %s" % (full_matrix, self.b))
+                  "and vector B (demand of j-th shop), at the bottom:")
+            print_matrix(full_matrix)
+            print_matrix(np.array([self.b]))
             theta *= theta_min
             print("Cycle starting from position (%i, %i): " % (pos_i, pos_j))
-            print(theta)
+            print_matrix(theta)
             print("theta = %s" % theta_min)
             self.x -= -theta
             print("Matrix X containing basic variables - amount of merchandise being transported\n"
                   "from i-th storage to j-th shop:")
-            print(self.x)
+            print_matrix(self.x)
 
             iteration += 1
 
@@ -292,13 +293,16 @@ class TP:
         full_matrix = np.c_[self.initial_c, self.initial_a]
         print("Matrix C (transportation cost from i-th storage to j-th shop),\n"
               "vector A (amount of merchandise in i-th storage), on the right\n"
-              "and vector B (demand of j-th shop), at the bottom: \n%s\n %s\n\n" % (full_matrix, self.b))
+              "and vector B (demand of j-th shop), at the bottom: ")
+        print_matrix(full_matrix)
+        print_matrix(np.array([self.b]))
+        print("\n\n")
         print("***********************************")
         print("Initial solution found using minimum-cost method:")
         print("***********************************")
         print("Matrix X containing basic variables - amount of merchandise being transported\n"
-              "from i-th storage to j-th shop: \n%s" % self.x)
-
+              "from i-th storage to j-th shop: \n")
+        print_matrix(self.x)
         self.method_of_potentials()
 
 
@@ -340,6 +344,19 @@ def main():
         # b = np.array([80, 120, 150, 50])
         # matrix_c = np.array([[5, 4, 8, 3], [4, 7, 4, 5], [5, 3, 6, 1]])
 
+        # num_storages = 2
+        # num_shops = 3
+        # a = np.array([6, 4])
+        # b = np.array([2, 3, 5])
+        # matrix_c = np.array([[6, 4, 1], [3, 5, 2]])
+
+        # num_storages = 5
+        # num_shops = 7
+        # a = np.array([7.0, 6.0, 4.0, 4.0, 2.0])
+        # b = np.array([6.5, 2.9, 2.5, 2.8, 2.7, 2.6, 3])
+        # matrix_c = np.array([[65, 68, 148, 9, 146, 70, 87], [168, 99, 41, 89, 99, 43, 185],
+        #                      [122, 58, 91, 48, 89, 48, 144], [109, 40, 142, 105, 72, 146, 188],
+        #                      [95, 172, 252, 113, 250, 169, 45]], dtype=float)
         num_storages = 4
         num_shops = 5
         a = np.array([28, 13, 19, 18])
