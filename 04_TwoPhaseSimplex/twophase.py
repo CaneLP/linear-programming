@@ -285,7 +285,7 @@ def main():
     while ans == 'y':
         np.set_printoptions(suppress=True)
         stop_logging_to_file()
-        
+
         rows = int(input("Enter number of rows in the matrix A: "))
         columns = int(input("Enter number of columns in the matrix A: "))
 
@@ -318,15 +318,6 @@ def main():
             f_opt_sign = -1
             c = np.negative(c)
 
-        rows = 3
-        columns = 4
-        matrix_a = np.array([[1, -1, 3, -1],
-                             [4, 0, -1, 3],
-                             [1, 3, 0, -3]])
-        b = [[9, 1, 3]]
-        c = [[1, 1, 0, 5]]
-        inequalities = [RelationSymbols.greater, RelationSymbols.greater, RelationSymbols.greater]
-        f_opt_sign = 1
 
         problem = TPSM(matrix_a, b[0], c[0], inequalities, columns, f_opt_sign)
         start_logging_to_file(output_file, mode)
