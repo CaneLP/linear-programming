@@ -5,6 +5,15 @@ import enum
 import copy
 
 
+def mprint(mat, fmt="g", new_line=True):
+    col_maxes = [max([len(("{:"+fmt+"}").format(x)) for x in col]) for col in mat.T]
+    for x in mat:
+        for i, y in enumerate(x):
+            print(("{:"+str(col_maxes[i])+fmt+"}").format(y), end="   ")
+        if new_line:
+            print("")
+
+
 class RelationSymbols(enum.Enum):
     greater = 1
     less = -1
@@ -48,11 +57,12 @@ class TPSM:
 
     def solve_problem(self):
         if not self.phase_one_simplex():
-            print("The original problem is infeasible!")
+            print("The original problem is infeasible!\n\n")
             return
         self.phase_two_simplex()
 
     def tableau_method(self):
+        epsilon = 1e-10
         # Izvrsava se sve dok postoji rj < 0
         while np.count_nonzero(self.a[-1] < 0) > 0:
             # Choosing pivot
@@ -82,7 +92,12 @@ class TPSM:
             for k in range(self.a.shape[0]):
                 if k != minimum_row:
                     self.a[k][minimum_col] = 0
-            print(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
+
+            for rj in range(self.a.shape[1]):
+                if abs(self.a[-1][rj]) < epsilon:
+                    self.a[-1][rj] = 0
+
+            mprint(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=40))
             print()
 
     def phase_one_simplex(self):
@@ -125,7 +140,7 @@ class TPSM:
         self.a = np.r_[self.a, np.c_[np.zeros(shape=(1, self.a.shape[1] - self.artificial_var_num)),
                                      np.ones(shape=(1, self.artificial_var_num))]]
 
-        print(np.c_[self.a, np.c_[[self.b], np.zeros(shape=(1, 1))].transpose()])
+        mprint(np.c_[self.a, np.c_[[self.b], np.zeros(shape=(1, 1))].transpose()])
         print()
         # Calculate starting matrix for the tableau method
         # Izracunavanje pocetne matrice za tablicni metod, tj. dodavanje poslednjeg reda
@@ -138,7 +153,7 @@ class TPSM:
         row_to_add = np.negative(row_to_add)
         self.a[-1, :] = row_to_add
         self.b.append(-b_to_add)
-        print(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
+        mprint(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
         print()
 
         self.tableau_method()
@@ -177,7 +192,7 @@ class TPSM:
         # Dodavanje reda funkcije ciji optimum trazimo
         self.a = np.r_[self.a, np.c_[[self.c], np.zeros(shape=(1, self.a.shape[1] - len(self.c)))]]
 
-        print(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
+        mprint(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
         print()
 
         # Cancel columns of f on positions which correspond to basic columns
@@ -218,7 +233,7 @@ class TPSM:
                         # print(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
                         # print()
                         break
-        print(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
+        mprint(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
         print()
 
         self.tableau_method()
@@ -243,7 +258,7 @@ class TPSM:
             print("(min) c = %s" % self.c)
         print("subject to: ")
         for i in range(self.initial_a.shape[0]):
-            print(self.initial_a[i], end="")
+            mprint(np.array([self.initial_a[i]]), new_line=False)
             if self.inequalities[i] == RelationSymbols.greater:
                 print(" >= ", end="")
             elif self.inequalities[i] == RelationSymbols.less:
@@ -253,7 +268,7 @@ class TPSM:
             print(self.initial_b[i])
         print("******************************")
         print("Optimal solution is: ")
-        print(x0)
+        mprint(x0)
         if self.f_opt_sign == -1:
             print("max_f: %s" % self.b[-1])
         else:
@@ -271,37 +286,78 @@ def main():
         np.set_printoptions(suppress=True)
         stop_logging_to_file()
 
-        rows = int(input("Enter number of rows in the matrix A: "))
-        columns = int(input("Enter number of columns in the matrix A: "))
+        # rows = int(input("Enter number of rows in the matrix A: "))
+        # columns = int(input("Enter number of columns in the matrix A: "))
+        #
+        # matrix_a = []
+        # inequalities = []
+        # print("Enter the %s x %s matrix A one row by one and (in)equality signs when asked: " % (rows, columns))
+        # for i in range(rows):
+        #     print("Row %d: " % (i + 1))
+        #     matrix_a.append(list(map(float, input().rstrip().split())))
+        #     c = input("Choose (in)equality type (<=, >=, =): ")
+        #     if c == "<=":
+        #         inequalities.append(RelationSymbols.less)
+        #     elif c == ">=":
+        #         inequalities.append(RelationSymbols.greater)
+        #     elif c == "=":
+        #         inequalities.append(RelationSymbols.equals)
+        #
+        # b = []
+        # print("Enter the b vector of length %s: " % rows)
+        # b.append(list(map(float, input().rstrip().split())))
+        #
+        # matrix_a = np.array(matrix_a)
+        #
+        # c = []
+        # print("Enter vector c, which will be optimized: ")
+        # c.append(list(map(float, input().rstrip().split())))
+        # opt = input("Optimization (min/max)? ")
+        # f_opt_sign = 1
+        # if opt == "max":
+        #     f_opt_sign = -1
+        #     c = np.negative(c)
 
-        matrix_a = []
-        inequalities = []
-        print("Enter the %s x %s matrix A one row by one and (in)equality signs when asked: " % (rows, columns))
-        for i in range(rows):
-            print("Row %d: " % (i + 1))
-            matrix_a.append(list(map(float, input().rstrip().split())))
-            c = input("Choose (in)equality type (<=, >=, =): ")
-            if c == "<=":
-                inequalities.append(RelationSymbols.less)
-            elif c == ">=":
-                inequalities.append(RelationSymbols.greater)
-            elif c == "=":
-                inequalities.append(RelationSymbols.equals)
-
-        b = []
-        print("Enter the b vector of length %s: " % rows)
-        b.append(list(map(float, input().rstrip().split())))
-
-        matrix_a = np.array(matrix_a)
-
-        c = []
-        print("Enter vector c, which will be optimized: ")
-        c.append(list(map(float, input().rstrip().split())))
-        opt = input("Optimization (min/max)? ")
+        rows = 3
+        columns = 4
+        matrix_a = np.array([[1, -1, 3, -1],
+                             [4, 0, -1, 3],
+                             [1, 3, 0, -3]])
+        b = [[9, 1, 3]]
+        c = [[1, 1, 0, 5]]
+        inequalities = [RelationSymbols.greater, RelationSymbols.greater, RelationSymbols.greater]
         f_opt_sign = 1
-        if opt == "max":
-            f_opt_sign = -1
-            c = np.negative(c)
+
+        # rows = 3
+        # columns = 4
+        # matrix_a = np.array([[0, 1, 0, 4],
+        #                      [0, 0, 1, 5],
+        #                      [1, 0, 0, 8]])
+        # b = [[1, 2, 3]]
+        # c = [[1, 5, 2, 9]]
+        # inequalities = [RelationSymbols.equals, RelationSymbols.equals, RelationSymbols.equals]
+        # f_opt_sign = 1
+
+        # rows = 4
+        # columns = 3
+        # matrix_a = np.array([[1, 3, 1], [3, 1, -1], [3, 1, 3], [1, 0, 0]])
+        # b = [[10, 2, 6, 1]]
+        # c = [[-3, -1, -4]]
+        # inequalities = [RelationSymbols.less, RelationSymbols.greater, RelationSymbols.less, RelationSymbols.less]
+        # f_opt_sign = -1
+
+        # rows = 5
+        # columns = 9
+        # matrix_a = np.array([[1, 1, 0, 1, 4, 0, 0, 9, 0],
+        #                      [0, 4, 0, 3, 0, 0, 1, 7, 0],
+        #                      [0, 5, 0, 7, 6, 0, 0, 3, 1],
+        #                      [0, 9, 0, 1, 9, 1, 0, 2, 0],
+        #                      [0, 4, 1, 3, 0, 0, 0, 1, 0]])
+        # b = [[1, 2, 3, 4, 5]]
+        # c = [[1, 2, 3, 4, 5, 6, 7, 8, 9]]
+        # inequalities = [RelationSymbols.equals, RelationSymbols.equals, RelationSymbols.equals,
+        #                 RelationSymbols.equals, RelationSymbols.equals]
+        # f_opt_sign = 1
 
         problem = TPSM(matrix_a, b[0], c[0], inequalities, columns, f_opt_sign)
         start_logging_to_file(output_file, mode)

@@ -222,3 +222,28 @@ Problem is unlimited, f->-inf.
 
 
 
+Input:
+A = 
+[[-4.  6.]
+ [ 1.  1.]],
+ b = [9.0, 4.0],
+Constraints are given in the form Ax<=b
+(max) c = [ 1. -2. -0.]
+*********************************
+Output:
+*********************************
+Initial x0 is: [0. 0. 9. 4.]
+Initial P is: [2, 3]
+Initial Q is: [0, 1]
+***********ITERATION 1***********
+Current x0 is: [ 4.  0. 25.  0.]
+Current P is: [0, 2]
+Current Q is: [1, 3]
+f = -0.0
+*********************************
+Optimal solution is found after 2 iterations:
+x0: [ 4.  0. 25.  0.]
+f_opt = 4.0
+
+
+

@@ -60,20 +60,45 @@ class TP:
         # If sum a_i is equal to sum b_i - closed transportation problem, otherwise introduce fictitious storage row
         sum_a = np.sum(self.a)
         sum_b = np.sum(self.b)
+
+        # If all ones in a and b, given problem is assignment problem
+        assignment_problem = False
+        if np.count_nonzero(np.array(self.a) == 1) == len(self.a)\
+                and np.count_nonzero(np.array(self.b) == 1) == len(self.b):
+            assignment_problem = True
+
         if sum_a < sum_b:
-            row_to_add = np.zeros(shape=(1, self.c.shape[1]))
-            # row_to_add = np.full((1, self.c.shape[1]), int(np.mean(self.c)) * 10)
-            self.c = np.r_[self.c, row_to_add]
-            self.a = np.append(self.a, [sum_b - sum_a])
+            # row_to_add = np.zeros(shape=(1, self.c.shape[1]))
+            row_to_add = np.full((1, self.c.shape[1]), int(np.mean(self.c)) * 10)
+            if assignment_problem:
+                diff = len(self.b) - len(self.a)
+                while diff:
+                    self.c = np.r_[self.c, row_to_add]
+                    diff -= 1
+                    self.a.append(1)
+            else:
+                self.c = np.r_[self.c, row_to_add]
+                self.a = np.append(self.a, [sum_b - sum_a])
         elif sum_a > sum_b:
-            col_to_add = np.zeros(shape=(1, self.c.shape[1]))
-            # col_to_add = np.full((1, self.c.shape[0]), int(np.mean(self.c)) * 10)
-            self.c = np.c_[self.c, col_to_add.transpose()]
-            self.b = np.append(self.b, [sum_a - sum_b])
+            # col_to_add = np.zeros(shape=(1, self.c.shape[1]))
+            col_to_add = np.full((1, self.c.shape[0]), int(np.mean(self.c)) * 10)
+            if assignment_problem:
+                diff = len(self.a) - len(self.b)
+                while diff:
+                    self.c = np.c_[self.c, col_to_add.transpose()]
+                    diff -= 1
+                    self.b.append(1)
+            else:
+                self.c = np.c_[self.c, col_to_add.transpose()]
+                self.b = np.append(self.b, [sum_a - sum_b])
 
         # Indicator that shows whether the row/column should be considered when searching for min c_i,j
         indicator = np.zeros(shape=(self.c.shape[0], self.c.shape[1]))
         x = np.zeros(shape=(self.c.shape[0], self.c.shape[1]))
+
+        print(self.c)
+        print(self.a)
+        print(self.b)
 
         a = copy.deepcopy(self.a)
         b = copy.deepcopy(self.b)
@@ -296,7 +321,7 @@ class TP:
               "and vector B (demand of j-th shop), at the bottom: ")
         mprint(full_matrix)
         mprint(np.array([self.b]))
-        print("\n\n")
+        print()
         print("***********************************")
         print("Initial solution found using minimum-cost method:")
         print("***********************************")
@@ -330,7 +355,7 @@ def main():
         for i in range(num_storages):
             matrix_c.append(list(map(float, input().rstrip().split())))
         matrix_c = np.array(matrix_c)
-        
+
         problem = TP(num_storages, num_shops, a[0], b[0], matrix_c)
         start_logging_to_file(output_file, mode)
         problem.solve_problem()
