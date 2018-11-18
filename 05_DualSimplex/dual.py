@@ -120,7 +120,7 @@ class Dual:
                     print("max_f: %s" % self.b[-1])
                 else:
                     print("min_f: %s" % str(-self.b[-1]))
-                print("******************************")
+                print("******************************\n\n")
                 return
 
             # Trazimo red sa negativnim b
@@ -160,6 +160,12 @@ class Dual:
                     self.b[k] = self.b[k] + (temp / pivot) * -self.b[i]
             self.a[i] = np.divide(self.a[i], pivot)
             self.b[i] = self.b[i] / pivot
+
+            # Handle bug with very small negative values
+            epsilon = 1e-10
+            for rj in range(len(self.b)):
+                if abs(self.b[rj]) < epsilon:
+                    self.b[rj] = 0
 
             print(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
             print()

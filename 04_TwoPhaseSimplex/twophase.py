@@ -93,6 +93,7 @@ class TPSM:
                 if k != minimum_row:
                     self.a[k][minimum_col] = 0
 
+            # Handle bug with very small negative values
             for rj in range(self.a.shape[1]):
                 if abs(self.a[-1][rj]) < epsilon:
                     self.a[-1][rj] = 0
