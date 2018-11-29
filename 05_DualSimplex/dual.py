@@ -1,4 +1,4 @@
-# The Two Phase Simplex Method
+# Dual Simplex Method
 import numpy as np
 import sys
 import enum

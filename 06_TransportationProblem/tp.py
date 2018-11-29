@@ -1,6 +1,5 @@
 # Transportation Problem
 
-# Revised Simplex Method with Eta factorization
 import numpy as np
 import sys
 import copy
