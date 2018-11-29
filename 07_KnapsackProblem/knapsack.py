@@ -63,23 +63,18 @@ class KP:
             self.table_i = table_i
             return
 
-    # def solve_backwards(self, ):
-    #     if curr < self.num_nz_items:
-    #         for y in range(self.knapsack_size + 1):
-    #             if y - self.weights[curr] < 0:
-    #                 second_par = float('-inf')
-    #             else:
-    #                 second_par = table_f[curr - 1][y - self.weights[curr]] + self.values[curr]
-    #             table_f[curr][y] = max(table_f[curr - 1][y], second_par)
-    #             if table_f[curr - 1][y] > second_par:
-    #                 table_i[curr][y] = table_i[curr - 1][y]
-    #             else:
-    #                 table_i[curr][y] = curr + 1
-    #         self.solve_in_front(table_f, table_i, curr + 1)
-    #     else:
-    #         self.table_f = table_f
-    #         self.table_i = table_i
-    #         return
+    def solve_backwards(self, k, y):
+        if k == 0:
+            print("F1(%s) = %s * [%s/%s] = %s" %
+                  (y, self.values[0], y, self.weights[0], self.values[k] * np.floor(y / self.weights[k])))
+            return self.values[k] * np.floor(y / self.weights[k])
+        if y - self.weights[k] < 0:
+            print("F%s(%s) = max{F%s(%s), %s + F%s(%s)}" % (k + 1, y, k, y, self.values[k], k, y - self.weights[k]))
+            return self.solve_backwards(k - 1, y)
+        else:
+            print("F%s(%s) = max{F%s(%s), %s + F%s(%s)}" % (k + 1, y, k, y, self.values[k], k, y - self.weights[k]))
+            return max(self.solve_backwards(k - 1, y),
+                       self.solve_backwards(k - 1, y - self.weights[k]) + self.values[k])
 
     def solve_problem(self):
         if self.recurrence_type == 1:
@@ -111,8 +106,13 @@ class KP:
                 j = space_left
             print("x = %s" % solution_x[0])
 
-        else:
-            self.solve_backwards()
+        elif self.recurrence_type == 2:
+            i, j = np.where(np.array([self.weights]) == 0)
+            self.weights = np.delete(self.weights, j)
+            self.values = np.delete(self.values, j)
+            self.num_items -= len(j)
+            parents = {}
+            print("f_max = %s" % self.solve_backwards(self.num_items - 1, self.knapsack_size))
 
 
 def main():
@@ -140,19 +140,19 @@ def main():
         # num_items = 4
         # values = np.array([[10, 2, -1, 3]])
         # weights = np.array([[3, 1, 3, 0]])
-        # recurrence_type = 1
+        # recurrence_type = 2
 
-        # knapsack_size = 8
-        # num_items = 5
-        # values = np.array([[3, 1, 7, 2, 5]])
-        # weights = np.array([[4, 1, 2, 3, 6]])
-        # recurrence_type = 1
-
-        knapsack_size = 9
-        num_items = 4
-        values = np.array([[3, 4, 5, 2]])
-        weights = np.array([[2, 3, 4, 5]])
+        knapsack_size = 8
+        num_items = 5
+        values = np.array([[3, 1, 7, 2, 5]])
+        weights = np.array([[4, 1, 2, 3, 6]])
         recurrence_type = 2
+
+        # knapsack_size = 9
+        # num_items = 4
+        # values = np.array([[3, 4, 5, 2]])
+        # weights = np.array([[2, 3, 4, 5]])
+        # recurrence_type = 2
 
         problem = KP(num_items, knapsack_size, weights[0], values[0], recurrence_type)
         start_logging_to_file(output_file, mode)
