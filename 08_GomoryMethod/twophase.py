@@ -56,7 +56,6 @@ class TPSM:
         self.slack_var_num = 0
 
     def solve_problem(self):
-        print(self.a, self.b, self.c, self.inequalities, self.initial_var_num)
         if not self.phase_one_simplex():
             print("The original problem is infeasible!\n\n")
             return
@@ -176,14 +175,10 @@ class TPSM:
         # Remove nonbasic artificial columns
         # Izbacivanje vestackih nebazisnih kolona
         for j in range(self.a.shape[1] - self.artificial_var_num, self.a.shape[1]):
-            remove_col = True
             for e in range(self.a.shape[0]):
-                if np.all(self.a[:, j] == np.eye(self.a.shape[0])[:, e]):
-                    remove_col = False
-                    break
-            if remove_col:
-                self.a[:, j] = np.zeros(shape=(self.a.shape[0], 1))[0]
-                self.artificial_var_num -= 1
+                if np.all(self.a[:, j] != np.eye(self.a.shape[0])[:, e]):
+                    self.a[:, j] = np.zeros(shape=(self.a.shape[0], 1))[0]
+
         self.a = self.a[:, ~np.all(self.a == 0, axis=0)]
 
         # Searching for an identity matrix before adding row for the function f
@@ -194,7 +189,7 @@ class TPSM:
                 if np.all(self.a[:, j] == np.eye(self.a.shape[0])[:, e]):
                     eye_matrices_pos.append([(np.where(self.a[:, j] == 1)[0][0]), j])
 
-        # # Add row for initial f
+        # Add row for initial f
         # Dodavanje reda funkcije ciji optimum trazimo
         self.a = np.r_[self.a, np.c_[[self.c], np.zeros(shape=(1, self.a.shape[1] - len(self.c)))]]
 
@@ -218,28 +213,27 @@ class TPSM:
             # Kada nisu sve nule
             else:
                 for i in range(self.a.shape[0]):
-                    j = self.a.shape[1] - self.artificial_var_num
-                    while j < self.a.shape[1]:
+                    for j in range(self.initial_var_num + self.slack_var_num, self.a.shape[1]):
                         if self.a[i][j] == 1:
                             column_r = np.where(self.a[i] != 0)
                             pivot = self.a[i][column_r[0][0]]
-                            # print(pivot)
                             col = column_r[0][0]
                             for k in range(self.a.shape[0]):
                                 for m in range(self.a.shape[1]):
-                                    if k != i:
-                                        if m != col:
-                                            self.a[k][m] -= ((self.a[i][m] * self.a[k][col]) / pivot)
-                            self.a[i] = np.divide(self.a[i], pivot)
-                            self.a[:, col] = np.zeros(shape=(1, self.a.shape[0]))
-                            self.a[i][col] = 1
-                            self.artificial_var_num -= 1
-                            self.a = np.delete(self.a, j, 1)
-                        j += 1
+                                    if k != i and m != col:
+                                        self.a[k][m] -= self.a[i][m] * self.a[k][col] / pivot
+                            for o in range(len(self.b)):
+                                if o != i:
+                                    self.b[o] -= self.b[i] * self.a[o][col] / pivot
+                            self.b[i] = self.b[i] / pivot
+                            self.a[i, :] = np.divide(self.a[i, :], pivot)
+                            for k in range(self.a.shape[0]):
+                                if k != i:
+                                    self.a[k][col] = 0
+                        self.a = np.delete(self.a, j, 1)
                         # print(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
                         # print()
                         break
-
         mprint(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
         print()
 
@@ -293,126 +287,38 @@ def main():
         np.set_printoptions(suppress=True)
         stop_logging_to_file()
 
-        # rows = int(input("Enter number of rows in the matrix A: "))
-        # columns = int(input("Enter number of columns in the matrix A: "))
-        #
-        # matrix_a = []
-        # inequalities = []
-        # print("Enter the %s x %s matrix A one row by one and (in)equality signs when asked: " % (rows, columns))
-        # for i in range(rows):
-        #     print("Row %d: " % (i + 1))
-        #     matrix_a.append(list(map(float, input().rstrip().split())))
-        #     c = input("Choose (in)equality type (<=, >=, =): ")
-        #     if c == "<=":
-        #         inequalities.append(RelationSymbols.less)
-        #     elif c == ">=":
-        #         inequalities.append(RelationSymbols.greater)
-        #     elif c == "=":
-        #         inequalities.append(RelationSymbols.equals)
-        #
-        # b = []
-        # print("Enter the b vector of length %s: " % rows)
-        # b.append(list(map(float, input().rstrip().split())))
-        #
-        # matrix_a = np.array(matrix_a)
-        #
-        # c = []
-        # print("Enter vector c, which will be optimized: ")
-        # c.append(list(map(float, input().rstrip().split())))
-        # opt = input("Optimization (min/max)? ")
+        rows = int(input("Enter number of rows in the matrix A: "))
+        columns = int(input("Enter number of columns in the matrix A: "))
 
-        rows = 3
-        columns = 2
-        matrix_a = np.array([[8, -7], [1, 6], [7, -3]])
-        c = [[1, 1]]
-        b = [[-14, 60, 16]]
-        inequalities = [RelationSymbols.greater, RelationSymbols.less, RelationSymbols.less]
-        opt = "max"
+        matrix_a = []
+        inequalities = []
+        print("Enter the %s x %s matrix A one row by one and (in)equality signs when asked: " % (rows, columns))
+        for i in range(rows):
+            print("Row %d: " % (i + 1))
+            matrix_a.append(list(map(float, input().rstrip().split())))
+            c = input("Choose (in)equality type (<=, >=, =): ")
+            if c == "<=":
+                inequalities.append(RelationSymbols.less)
+            elif c == ">=":
+                inequalities.append(RelationSymbols.greater)
+            elif c == "=":
+                inequalities.append(RelationSymbols.equals)
 
-        # rows = 3
-        # columns = 2
-        # matrix_a = np.array([[2, 11], [1, 1], [4, -5]])
-        # c = [[1, 1]]
-        # b = [[38, 7, 5]]
-        # inequalities = [RelationSymbols.less, RelationSymbols.less, RelationSymbols.less]
-        # opt = "max"
+        b = []
+        print("Enter the b vector of length %s: " % rows)
+        b.append(list(map(float, input().rstrip().split())))
 
-        # rows = 2
-        # columns = 4
-        # matrix_a = np.array([[2, -2, -3, 2], [0, 3, 3, -1]])
-        # c = [[-1, -1, 0, 0]]
-        # b = [[5, 3]]
-        # inequalities = [RelationSymbols.equals, RelationSymbols.equals]
-        # opt = "min"
+        matrix_a = np.array(matrix_a)
 
-        # rows = 3
-        # columns = 3
-        # matrix_a = np.array([[2, -1, -1], [1, 2, 1], [-1, 1, -2]])
-        # c = [[7, 4, 1]]
-        # b = [[0, 3, -4]]
-        # inequalities = [RelationSymbols.greater, RelationSymbols.greater, RelationSymbols.greater]
-        # opt = "min"
-
-        # rows = 3
-        # columns = 3
-        # matrix_a = np.array([[2, 1, 5], [1, -5, 1], [14, 2, -5]])
-        # c = [[1, 11, 2]]
-        # b = [[15, 7, 5]]
-        # inequalities = [RelationSymbols.less, RelationSymbols.greater, RelationSymbols.greater]
-        # opt = "max"
-
-        # rows = 2
-        # columns = 2
-        # matrix_a = np.array([[2, 3], [11, 5]])
-        # c = [[4, 5]]
-        # b = [[12, 35]]
-        # inequalities = [RelationSymbols.less, RelationSymbols.less]
-        # opt = "max"
-
-        # rows = 3
-        # columns = 2
-        # matrix_a = np.array([[2, 3], [11, 5], [1, 0]])
-        # c = [[4, 5]]
-        # b = [[12, 35, 1]]
-        # inequalities = [RelationSymbols.less, RelationSymbols.less, RelationSymbols.less]
-        # opt = "max"
-
-        # rows = 4
-        # columns = 2
-        # matrix_a = np.array([[2, 3], [11, 5], [1, 0], [0, 1]])
-        # c = [[4, 5]]
-        # b = [[12, 35, 1, 3]]
-        # inequalities = [RelationSymbols.less, RelationSymbols.less, RelationSymbols.less, RelationSymbols.less]
-        # opt = "max"
-
-        # rows = 4
-        # columns = 2
-        # matrix_a = np.array([[2, 3], [11, 5], [1, 0], [0, 1]])
-        # c = [[4, 5]]
-        # b = [[12, 35, 1, 4]]
-        # inequalities = [RelationSymbols.less, RelationSymbols.less, RelationSymbols.less, RelationSymbols.greater]
-        # opt = "max"
-
-        # rows = 4
-        # columns = 2
-        # matrix_a = np.array([[2, 3], [11, 5], [1, 0], [0, 1]])
-        # c = [[4, 5]]
-        # b = [[12, 35, 2, 2]]
-        # inequalities = [RelationSymbols.less, RelationSymbols.less, RelationSymbols.greater, RelationSymbols.less]
-        # opt = "max"
-
-        # rows = 4
-        # columns = 2
-        # matrix_a = np.array([[2, 3], [11, 5], [1, 0], [0, 1]])
-        # c = [[4, 5]]
-        # b = [[12, 35, 2, 3]]
-        # inequalities = [RelationSymbols.less, RelationSymbols.less, RelationSymbols.greater, RelationSymbols.greater]
-        # opt = "max"
-
+        c = []
+        print("Enter vector c, which will be optimized: ")
+        c.append(list(map(float, input().rstrip().split())))
+        opt = input("Optimization (min/max)? ")
         f_opt_sign = 1
         if opt == "max":
             f_opt_sign = -1
             c = np.negative(c)
+
 
         problem = TPSM(matrix_a, b[0], c[0], inequalities, columns, f_opt_sign)
         start_logging_to_file(output_file, mode)
