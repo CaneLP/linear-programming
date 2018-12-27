@@ -1,4 +1,4 @@
-# The Two Phase Simplex Method
+# Gomory Method
 import numpy as np
 import sys
 import enum
@@ -43,7 +43,7 @@ def stop_logging_to_file():
 
 
 class TPSM:
-    def __init__(self, a, b, c, inequalities, var_num, f_opt_sign):
+    def __init__(self, a, b, c, inequalities, var_num, f_opt_sign, first):
         self.a = a
         self.initial_a = copy.deepcopy(a)
         self.b = b
@@ -54,8 +54,12 @@ class TPSM:
         self.inequalities = inequalities
         self.artificial_var_num = 0
         self.slack_var_num = 0
+        self.curr_table = None
+        self.solution = None
+        self.first = first
+        self.f_pos = None
 
-    def solve_problem(self):
+    def two_phase(self):
         if not self.phase_one_simplex():
             print("The original problem is infeasible!\n\n")
             return
@@ -64,12 +68,12 @@ class TPSM:
     def tableau_method(self):
         epsilon = 1e-10
         # Izvrsava se sve dok postoji rj < 0
-        while np.count_nonzero(self.a[-1] < 0) > 0:
+        while np.count_nonzero(self.a[0] < 0) > 0:
             # Choosing pivot
             # Odredjivanje pivota
             minimum_col = 0
             for j in range(self.a.shape[1]):
-                if self.a[-1][j] < 0:
+                if self.a[0][j] < 0:
                     minimum_col = j
                     break
             minimum = float('inf')
@@ -95,13 +99,74 @@ class TPSM:
 
             # Handle bug with very small negative values
             for rj in range(self.a.shape[1]):
-                if abs(self.a[-1][rj]) < epsilon:
-                    self.a[-1][rj] = 0
+                if abs(self.a[0][rj]) < epsilon:
+                    self.a[0][rj] = 0
 
+            self.curr_table = np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=40)
             mprint(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=40))
             print()
 
     def phase_one_simplex(self):
+        # print("*****************************************")
+        # print("*************** PHASE ONE ***************")
+        # print("*****************************************")
+        # print(self.a)
+        # # Adding slack variables
+        # # Dodavanje izravnavajucih promenljivih
+        # num_of_slack_vars = 0
+        # col_to_add = np.zeros(shape=(self.a.shape[0], 1))
+        # for i in range(self.a.shape[0]):
+        #     if self.inequalities[i] == RelationSymbols.greater:
+        #         col_to_add[i][0] = -1
+        #     elif self.inequalities[i] == RelationSymbols.less:
+        #         col_to_add[i][0] = 1
+        #     else:
+        #         continue
+        #     self.a = np.c_[self.a, col_to_add]
+        #     num_of_slack_vars += 1
+        #     col_to_add[i][0] = 0
+        # self.slack_var_num = self.a.shape[1] - self.initial_var_num
+        # # Adding artificial variables
+        # # Dodavanje vestackih promenljivih
+        # artificial_var_rows = []
+        # self.artificial_var_num = 0
+        # for i in range(self.a.shape[0]):
+        #     curr_slack_position = np.where(self.a[i,
+        #                                    self.initial_var_num: self.initial_var_num + num_of_slack_vars] != 0)
+        #     if len(curr_slack_position[0]) == 0 \
+        #             or self.a[i][self.initial_var_num + curr_slack_position[0][0]] * self.b[i] < 0:
+        #         self.artificial_var_num += 1
+        #         artificial_var_rows.append(i)
+        #         col_to_add[i][0] = np.sign(self.b[i])
+        #         self.a = np.c_[self.a, col_to_add]
+        #         col_to_add[i][0] = 0
+        # print(self.a)
+        # # Add new row for minimization of new function - sum of artificial variables
+        # # Dodavanje novog reda za minimizaciju nove funkcije - sume vestackih promenljivih
+        # self.a = np.r_[self.a, np.c_[np.zeros(shape=(1, self.a.shape[1] - self.artificial_var_num)),
+        #                              np.ones(shape=(1, self.artificial_var_num))]]
+        #
+        # mprint(np.c_[self.a, np.c_[[self.b], np.zeros(shape=(1, 1))].transpose()])
+        # print()
+        # # Calculate starting matrix for the tableau method
+        # # Izracunavanje pocetne matrice za tablicni metod, tj. dodavanje poslednjeg reda
+        # row_to_add = np.zeros(shape=(1, self.a.shape[1]))
+        # b_to_add = 0
+        # for row in artificial_var_rows:
+        #     b_to_add += self.b[row]
+        #     row_to_add += self.a[row]
+        # row_to_add[:, self.a.shape[1] - self.artificial_var_num:] = 0
+        # row_to_add = np.negative(row_to_add)
+        # print(row_to_add)
+        # # np.insert(self.a, 0, row_to_add, 0)
+        # self.a[-1,:] = row_to_add
+        # # self.b.insert(0, -b_to_add)
+        # self.b.append(-b_to_add)
+        # self.a[[0, -1]] = self.a[[-1, 0]]
+        # self.b[0], self.b[-1] = self.b[-1], self.b[0]
+        # mprint(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
+        # print()
+
         print("*****************************************")
         print("*************** PHASE ONE ***************")
         print("*****************************************")
@@ -159,8 +224,8 @@ class TPSM:
 
         self.tableau_method()
 
-        if np.around(self.b[-1], decimals=5) != 0:
-            print(self.b[-1])
+        if np.around(self.b[0], decimals=5) != 0:
+            print(self.b[0])
             return False
         else:
             return True
@@ -169,8 +234,9 @@ class TPSM:
         print("*****************************************")
         print("*************** PHASE TWO ***************")
         print("*****************************************")
-
-        self.a = np.delete(self.a, self.a.shape[0] - 1, 0)
+        print(self.a)
+        self.a = np.delete(self.a, 0, 0)
+        print(self.a)
 
         # Remove nonbasic artificial columns
         # Izbacivanje vestackih nebazisnih kolona
@@ -181,26 +247,29 @@ class TPSM:
 
         self.a = self.a[:, ~np.all(self.a == 0, axis=0)]
 
-        # Searching for an identity matrix before adding row for the function f
-        # Potraga za jedinicnom matricom, pre dodavanja poslednje vrste, funkcije f
-        eye_matrices_pos = []
-        for j in range(self.a.shape[1]):
-            for e in range(self.a.shape[0]):
-                if np.all(self.a[:, j] == np.eye(self.a.shape[0])[:, e]):
-                    eye_matrices_pos.append([(np.where(self.a[:, j] == 1)[0][0]), j])
+        if self.first:
+            # Searching for an identity matrix before adding row for the function f
+            # Potraga za jedinicnom matricom, pre dodavanja poslednje vrste, funkcije f
+            eye_matrices_pos = []
+            for j in range(self.a.shape[1]):
+                for e in range(self.a.shape[0]):
+                    if np.all(self.a[:, j] == np.eye(self.a.shape[0])[:, e]):
+                        eye_matrices_pos.append([(np.where(self.a[:, j] == 1)[0][0]), j])
 
-        # Add row for initial f
-        # Dodavanje reda funkcije ciji optimum trazimo
-        self.a = np.r_[self.a, np.c_[[self.c], np.zeros(shape=(1, self.a.shape[1] - len(self.c)))]]
+            # Add row for initial f
+            # Dodavanje reda funkcije ciji optimum trazimo
+            print(self.a)
+            print(self.c)
+            self.a = np.r_[np.c_[[self.c], np.zeros(shape=(1, self.a.shape[1] - len(self.c)))], self.a]
 
-        mprint(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
-        print()
+            mprint(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
+            print()
 
-        # Cancel columns of f on positions which correspond to basic columns
-        # Ponistavanje kolona od f na pozicijama koje odgovaraju bazisnim kolonama
-        for eye_pos in eye_matrices_pos:
-            self.b[-1] -= (self.b[eye_pos[0]] * self.a[-1][eye_pos[1]])
-            self.a[-1] -= (self.a[eye_pos[0]] * self.a[-1][eye_pos[1]])
+            # Cancel columns of f on positions which correspond to basic columns
+            # Ponistavanje kolona od f na pozicijama koje odgovaraju bazisnim kolonama
+            for eye_pos in eye_matrices_pos:
+                self.b[0] -= (self.b[eye_pos[0]] * self.a[0][eye_pos[1]])
+                self.a[0] -= (self.a[eye_pos[0]] * self.a[0][eye_pos[1]])
 
         # Izbaci sve vestacke
         while self.a.shape[1] > self.initial_var_num + self.slack_var_num:
@@ -234,6 +303,7 @@ class TPSM:
                         # print(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
                         # print()
                         break
+        self.curr_table = np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=40)
         mprint(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=4))
         print()
 
@@ -250,6 +320,8 @@ class TPSM:
         x0 = np.zeros(shape=(1, self.a.shape[1]))
         for eye_pos in eye_matrices_pos:
             x0[0][eye_pos[1]] = self.b[eye_pos[0]]
+
+        self.solution = x0
 
         print("******************************")
         print("Input:")
@@ -275,59 +347,4 @@ class TPSM:
         else:
             print("min_f: %s" % str(-self.b[-1]))
         print("******************************")
-        print("\n\n")
 
-
-def main():
-    output_file = "output.txt"
-    mode = "a"
-    sys.stdout = FileLogger(output_file, mode)
-    ans = 'y'
-    while ans == 'y':
-        np.set_printoptions(suppress=True)
-        stop_logging_to_file()
-
-        rows = int(input("Enter number of rows in the matrix A: "))
-        columns = int(input("Enter number of columns in the matrix A: "))
-
-        matrix_a = []
-        inequalities = []
-        print("Enter the %s x %s matrix A one row by one and (in)equality signs when asked: " % (rows, columns))
-        for i in range(rows):
-            print("Row %d: " % (i + 1))
-            matrix_a.append(list(map(float, input().rstrip().split())))
-            c = input("Choose (in)equality type (<=, >=, =): ")
-            if c == "<=":
-                inequalities.append(RelationSymbols.less)
-            elif c == ">=":
-                inequalities.append(RelationSymbols.greater)
-            elif c == "=":
-                inequalities.append(RelationSymbols.equals)
-
-        b = []
-        print("Enter the b vector of length %s: " % rows)
-        b.append(list(map(float, input().rstrip().split())))
-
-        matrix_a = np.array(matrix_a)
-
-        c = []
-        print("Enter vector c, which will be optimized: ")
-        c.append(list(map(float, input().rstrip().split())))
-        opt = input("Optimization (min/max)? ")
-        f_opt_sign = 1
-        if opt == "max":
-            f_opt_sign = -1
-            c = np.negative(c)
-
-
-        problem = TPSM(matrix_a, b[0], c[0], inequalities, columns, f_opt_sign)
-        start_logging_to_file(output_file, mode)
-        problem.solve_problem()
-        stop_logging_to_file()
-
-        ans = input("Do you want to continue testing? (y/n) ")
-        start_logging_to_file(output_file, mode)
-
-
-if __name__ == '__main__':
-    main()
