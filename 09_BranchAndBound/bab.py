@@ -52,6 +52,7 @@ class TPSM:
         self.initial_var_num = var_num
         self.f_opt_sign = f_opt_sign
         self.inequalities = inequalities
+        self.initial_inequalities = copy.deepcopy(inequalities)
         self.artificial_var_num = 0
         self.slack_var_num = 0
         self.solution = None
@@ -122,10 +123,24 @@ class TPSM:
             mprint(np.around(np.c_[self.a, np.array(self.b).transpose()], decimals=40))
             print()
 
+    def change_ineq(self, pos):
+        if self.inequalities[pos] == RelationSymbols.less:
+            self.inequalities[pos] = RelationSymbols.greater
+        elif self.inequalities[pos] == RelationSymbols.greater:
+            self.inequalities[pos] = RelationSymbols.less
+
     def phase_one_simplex(self):
         print("*****************************************")
         print("*************** PHASE ONE ***************")
         print("*****************************************")
+
+        # Handling negative b values
+        # Resavanja negativnih vrednosti b
+        for i in range(len(self.b)):
+            if self.b[i] < 0:
+                self.b[i] = -self.b[i]
+                self.a[i] = np.negative(self.a[i])
+                self.change_ineq(i)
 
         # Adding slack variables
         # Dodavanje izravnavajucih promenljivih
@@ -142,6 +157,7 @@ class TPSM:
             num_of_slack_vars += 1
             col_to_add[i][0] = 0
         self.slack_var_num = self.a.shape[1] - self.initial_var_num
+
         # Adding artificial variables
         # Dodavanje vestackih promenljivih
         artificial_var_rows = []
@@ -274,10 +290,10 @@ class TPSM:
                     eye_matrices_pos.append([(np.where(self.a[:, j] == 1)[0][0]), j])
 
         x0 = np.zeros(shape=(1, self.a.shape[1]))
+
         for eye_pos in eye_matrices_pos:
             x0[0][eye_pos[1]] = self.b[eye_pos[0]]
         self.solution = x0
-        self.f_opt = self.b[-1]
         print("******************************")
         print("Input:")
         if self.f_opt_sign == -1:
@@ -298,8 +314,10 @@ class TPSM:
         print("Optimal solution is: ")
         mprint(x0)
         if self.f_opt_sign == -1:
-            print("max_f: %s" % self.b[-1])
+            self.f_opt = np.around(self.b[-1], decimals=5)
+            print("max_f: %s" % self.f_opt)
         else:
+            self.f_opt = -np.around(self.b[-1], decimals=5)
             print("min_f: %s" % str(-self.b[-1]))
         print("******************************")
         print("\n\n")
@@ -319,6 +337,7 @@ class BAB:
         self.slack_var_num = 0
         self.solution = None
 
+    # Funkcija koja proverava da li je trenutno resenje celobrojno
     @staticmethod
     def is_integer_solution(solution):
         eps = 1e-6
@@ -327,6 +346,7 @@ class BAB:
                 return False
         return True
 
+    # Odsecanje - brisemo gora resenja iz strukture
     @staticmethod
     def delete_worse_solutions(problems, value):
         i = 0
@@ -343,14 +363,19 @@ class BAB:
         print("------------------------")
         print("----BRANCH AND BOUND----")
         print("------------------------\n\n")
+        # Struktura koju punimo problemima
         problems = []
+        # Ubacujemo pocetni problem u skup problema
         initial_problem = TPSM(copy.deepcopy(self.a), copy.deepcopy(self.b), copy.deepcopy(self.c),
                             copy.deepcopy(self.inequalities), copy.deepcopy(self.initial_var_num),
                             copy.deepcopy(self.f_opt_sign))
         problems.append([initial_problem, float('inf')])
 
         num_iter = 0
-        f_opt = float('-inf')
+        if self.f_opt_sign == 1:
+            f_opt = float('inf')
+        else:
+            f_opt = float('-inf')
         x_opt = []
         while len(problems):
             print("--------")
@@ -361,12 +386,17 @@ class BAB:
             curr_problem[0].solve_problem()
             curr_solution = curr_problem[0].solution
             if curr_solution is not None:
-                curr_f, curr_x = curr_problem[0].f_opt, curr_problem[0].solution[0, :curr_problem[0].initial_var_num]
+                curr_f = np.around(curr_problem[0].f_opt, decimals=10)
+                curr_x = np.around(curr_problem[0].solution[0], decimals=10)
             else:
-                curr_f, curr_x = float('-inf'), None
+                if self.f_opt_sign == 1:
+                    curr_f, curr_x = float('inf'), None
+                else:
+                    curr_f, curr_x = float('-inf'), None
             problems.pop(0)
-            if curr_f > f_opt:
-                if self.is_integer_solution(curr_x):
+
+            if (curr_f > f_opt and self.f_opt_sign == -1) or (curr_f < f_opt and self.f_opt_sign == 1):
+                if self.is_integer_solution(np.around(curr_x, decimals=5)):
                     x_opt = curr_x
                     f_opt = curr_f
                     problems = self.delete_worse_solutions(problems, f_opt)
@@ -383,10 +413,11 @@ class BAB:
                             new_b.append(np.floor(curr_x[i]))
                             # print(new_b)
 
-                            new_ineq = copy.deepcopy(curr_problem[0].inequalities)
+                            new_ineq = copy.deepcopy(curr_problem[0].initial_inequalities)
                             new_ineq.append(RelationSymbols.less)
                             # print(new_ineq)
 
+                            # if new_b != 0:
                             new_problem = TPSM(new_a, new_b, self.c, new_ineq, self.initial_var_num, self.f_opt_sign)
                             problems.append([copy.deepcopy(new_problem), curr_f])
 
@@ -399,7 +430,7 @@ class BAB:
                             new_b.append(np.ceil(curr_x[i]))
                             # print(new_b)
 
-                            new_ineq = copy.deepcopy(curr_problem[0].inequalities)
+                            new_ineq = copy.deepcopy(curr_problem[0].initial_inequalities)
                             new_ineq.append(RelationSymbols.greater)
                             # print(new_ineq)
 
@@ -408,8 +439,8 @@ class BAB:
                             # print(problems)
 
                             break
-
             num_iter += 1
+
         print("###########################################")
         print("FINAL SOLUTION FOUND USING BRANCH AND BOUND")
         print("###########################################")
@@ -432,17 +463,18 @@ class BAB:
         if x_opt is not None:
             print("******************************")
             print("Optimal solution is: ")
-            print(x_opt)
+            print(x_opt[:self.initial_var_num])
             if self.f_opt_sign == -1:
                 print("max_f: %s" % f_opt)
             else:
-                print("min_f: %s" % str(-f_opt))
+                print("min_f: %s" % f_opt)
             print("******************************")
             print("\n\n")
         else:
             print("***********************************")
             print("The original problem is infeasible!")
             print("***********************************\n\n")
+
 
 def main():
     output_file = "output.txt"
@@ -453,33 +485,33 @@ def main():
         np.set_printoptions(suppress=True)
         stop_logging_to_file()
 
-        # rows = int(input("Enter number of rows in the matrix A: "))
-        # columns = int(input("Enter number of columns in the matrix A: "))
-        #
-        # matrix_a = []
-        # inequalities = []
-        # print("Enter the %s x %s matrix A one row by one and (in)equality signs when asked: " % (rows, columns))
-        # for i in range(rows):
-        #     print("Row %d: " % (i + 1))
-        #     matrix_a.append(list(map(float, input().rstrip().split())))
-        #     c = input("Choose (in)equality type (<=, >=, =): ")
-        #     if c == "<=":
-        #         inequalities.append(RelationSymbols.less)
-        #     elif c == ">=":
-        #         inequalities.append(RelationSymbols.greater)
-        #     elif c == "=":
-        #         inequalities.append(RelationSymbols.equals)
-        #
-        # b = []
-        # print("Enter the b vector of length %s: " % rows)
-        # b.append(list(map(float, input().rstrip().split())))
-        #
-        # matrix_a = np.array(matrix_a)
-        #
-        # c = []
-        # print("Enter vector c, which will be optimized: ")
-        # c.append(list(map(float, input().rstrip().split())))
-        # opt = input("Optimization (min/max)? ")
+        rows = int(input("Enter number of rows in the matrix A: "))
+        columns = int(input("Enter number of columns in the matrix A: "))
+
+        matrix_a = []
+        inequalities = []
+        print("Enter the %s x %s matrix A one row by one and (in)equality signs when asked: " % (rows, columns))
+        for i in range(rows):
+            print("Row %d: " % (i + 1))
+            matrix_a.append(list(map(float, input().rstrip().split())))
+            c = input("Choose (in)equality type (<=, >=, =): ")
+            if c == "<=":
+                inequalities.append(RelationSymbols.less)
+            elif c == ">=":
+                inequalities.append(RelationSymbols.greater)
+            elif c == "=":
+                inequalities.append(RelationSymbols.equals)
+
+        b = []
+        print("Enter the b vector of length %s: " % rows)
+        b.append(list(map(float, input().rstrip().split())))
+
+        matrix_a = np.array(matrix_a)
+
+        c = []
+        print("Enter vector c, which will be optimized: ")
+        c.append(list(map(float, input().rstrip().split())))
+        opt = input("Optimization (min/max)? ")
 
         # rows = 3
         # columns = 2
@@ -487,6 +519,14 @@ def main():
         # c = [[1, 1]]
         # b = [[-14, 60, 16]]
         # inequalities = [RelationSymbols.greater, RelationSymbols.less, RelationSymbols.less]
+        # opt = "max"
+
+        # rows = 3
+        # columns = 2
+        # matrix_a = np.array([[-8, 7], [1, 6], [7, -3]])
+        # c = [[1, 1]]
+        # b = [[14, 60, 16]]
+        # inequalities = [RelationSymbols.less, RelationSymbols.less, RelationSymbols.less]
         # opt = "max"
 
         # rows = 3
@@ -521,13 +561,13 @@ def main():
         # inequalities = [RelationSymbols.less, RelationSymbols.greater, RelationSymbols.greater]
         # opt = "max"
 
-        rows = 2
-        columns = 2
-        matrix_a = np.array([[2, 3], [11, 5]])
-        c = [[4, 5]]
-        b = [[12, 35]]
-        inequalities = [RelationSymbols.less, RelationSymbols.less]
-        opt = "max"
+        # rows = 2
+        # columns = 2
+        # matrix_a = np.array([[2, 3], [11, 5]])
+        # c = [[4, 5]]
+        # b = [[12, 35]]
+        # inequalities = [RelationSymbols.less, RelationSymbols.less]
+        # opt = "max"
 
         # rows = 3
         # columns = 2
@@ -568,6 +608,56 @@ def main():
         # b = [[12, 35, 2, 3]]
         # inequalities = [RelationSymbols.less, RelationSymbols.less, RelationSymbols.greater, RelationSymbols.greater]
         # opt = "max"
+
+        # rows = 1
+        # columns = 4
+        # matrix_a = np.array([[8, 5, 3, 2]])
+        # c = [[15, 12, 4, 2]]
+        # b = [[10]]
+        # inequalities = [RelationSymbols.less]
+        # opt = "max"
+
+        # rows = 1
+        # columns = 2
+        # matrix_a = np.array([[-10, 20], [5, 10], [1, 0]])
+        # c = [[-1, 4]]
+        # b = [[22, 49, 5]]
+        # inequalities = [RelationSymbols.less, RelationSymbols.less, RelationSymbols.less]
+        # opt = "max"
+
+        # rows = 1
+        # columns = 4
+        # matrix_a = np.array([[6, 3, 5, 2], [0, 0, -1, 1], [-1, 0, 1, 0], [0, -1, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0],
+        #                      [0, 0, 1, 0], [0, 0, 0, 1]])
+        # c = [[9, 5, 6, 4]]
+        # b = [[10, 1, 0, 0, 1, 1, 1, 1]]
+        # inequalities = [RelationSymbols.less, RelationSymbols.less, RelationSymbols.less, RelationSymbols.less,
+        #                 RelationSymbols.less, RelationSymbols.less, RelationSymbols.less, RelationSymbols.less]
+        # opt = "max"
+
+        # rows = 1
+        # columns = 2
+        # matrix_a = np.array([[6, 22], [3, 2]])
+        # c = [[1, 2]]
+        # b = [[33, 12]]
+        # inequalities = [RelationSymbols.greater, RelationSymbols.greater]
+        # opt = "min"
+
+        # rows = 1
+        # columns = 2
+        # matrix_a = np.array([[-4, 6], [1, 1]])
+        # c = [[1, -2]]
+        # b = [[9, 4]]
+        # inequalities = [RelationSymbols.less, RelationSymbols.less]
+        # opt = "max"
+
+        # rows = 1
+        # columns = 2
+        # matrix_a = np.array([[3, 1], [-1, 2]])
+        # c = [[-6, -5]]
+        # b = [[11, 5]]
+        # inequalities = [RelationSymbols.less, RelationSymbols.less]
+        # opt = "min"
 
         f_opt_sign = 1
         if opt == "max":
