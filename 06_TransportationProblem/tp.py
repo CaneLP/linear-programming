@@ -57,41 +57,23 @@ class TP:
     # Trazenje pocetnog resenja metodom minimalnih cena
     def initial_solution(self):
         # If sum a_i is equal to sum b_i - closed transportation problem, otherwise introduce fictitious storage row
+        # Ako je sum_a_i jednako sum_b_i - zatvoren transportni problem, inace uvedi novi izjednacavajuci red
         sum_a = np.sum(self.a)
         sum_b = np.sum(self.b)
-
-        # If all ones in a and b, given problem is assignment problem
-        assignment_problem = False
-        if np.count_nonzero(np.array(self.a) == 1) == len(self.a)\
-                and np.count_nonzero(np.array(self.b) == 1) == len(self.b):
-            assignment_problem = True
 
         if sum_a < sum_b:
             # row_to_add = np.zeros(shape=(1, self.c.shape[1]))
             row_to_add = np.full((1, self.c.shape[1]), int(np.mean(self.c)) * 10)
-            if assignment_problem:
-                diff = len(self.b) - len(self.a)
-                while diff:
-                    self.c = np.r_[self.c, row_to_add]
-                    diff -= 1
-                    self.a.append(1)
-            else:
-                self.c = np.r_[self.c, row_to_add]
-                self.a = np.append(self.a, [sum_b - sum_a])
+            self.c = np.r_[self.c, row_to_add]
+            self.a = np.append(self.a, [sum_b - sum_a])
         elif sum_a > sum_b:
             # col_to_add = np.zeros(shape=(1, self.c.shape[1]))
             col_to_add = np.full((1, self.c.shape[0]), int(np.mean(self.c)) * 10)
-            if assignment_problem:
-                diff = len(self.a) - len(self.b)
-                while diff:
-                    self.c = np.c_[self.c, col_to_add.transpose()]
-                    diff -= 1
-                    self.b.append(1)
-            else:
-                self.c = np.c_[self.c, col_to_add.transpose()]
-                self.b = np.append(self.b, [sum_a - sum_b])
+            self.c = np.c_[self.c, col_to_add.transpose()]
+            self.b = np.append(self.b, [sum_a - sum_b])
 
         # Indicator that shows whether the row/column should be considered when searching for min c_i,j
+        # Indikator koji pokazuje da li razmatrati red/kolonu kada se trazi min c_i,j
         indicator = np.zeros(shape=(self.c.shape[0], self.c.shape[1]))
         x = np.zeros(shape=(self.c.shape[0], self.c.shape[1]))
 
@@ -104,6 +86,7 @@ class TP:
 
         while True:
             # Find row (p) and column (q) of the current available minimum element and assign new values to x, a, b
+            # Pronadji red (p) i kolonu (q) trenutnog najmanjeg elementa i dodeli nove vrednosti x, a, b
             p = 0
             q = 0
             minimum_c = np.inf
@@ -129,6 +112,7 @@ class TP:
         return x
 
     # Positions in the matrix are encoded with a number whose digits represent positions, a = ij (4: i = 0, j = 4)
+    # Pozicije u matrici su enkodirane brojem, cije cifre predstavljaju pozicije, a = ij (npr. - 4: i = 0, j = 4)
     def calculate_adjacency_list(self):
         adj_list = {}
         for i in range(self.x.shape[0]):
@@ -141,6 +125,8 @@ class TP:
         return adj_list
 
     # Returns encoded values of positions where theta or theta negative should be added. Using DFS for cycle searching
+    # Vraca enkodirane vrednosti pozicija gde treba dodati pozitivne i negativne teta.
+    # Koriscenje DFS-a za pretragu cikla
     @staticmethod
     def find_theta_cycle(adj_list, marked, start):
         path = [start]
@@ -156,6 +142,7 @@ class TP:
             for w in adj_list[v]:
                 available = True
                 # Disable stepping over already selected basic variable.
+                # Onemoguci racunanje vec izabrane bazisne promenljive
                 wi, wj = TP.decode_position(w)
                 vi, vj = TP.decode_position(v)
                 row_num_basic = 0
@@ -197,8 +184,16 @@ class TP:
         print("Method of potentials, step by step")
         print("***********************************")
         iteration = 1
+
+        # Check if the problem is degenerative
+        # Proveri da li je problem degenerativan
+        if np.count_nonzero(self.x) != self.m + self.n - 1:
+            print("\nDegenerative case!\n\n")
+            return
+
         while True:
             # Determining the row/column with maximum number of basic variables
+            # Odredjivanje reda/kolone sa maksimalnim brojem bazisnih promenljivih
             i = 0
             max_basic_i = 0
             for k in range(self.x.shape[0]):
@@ -218,6 +213,7 @@ class TP:
             v = np.full((1, len(self.b)), np.inf)[0]
 
             # Setting that row/column of vector u/v to zero and calculating rest of u and v elements
+            # Postavljanje tog reda/kolone vektora u/v na nulu i racunanje ostalih elemenata u i v
             if max_basic_i >= max_basic_j:
                 u[i] = 0
             else:
@@ -237,6 +233,8 @@ class TP:
 
             # Finding smallest value less than zero: c(non-basic)_i,j - (u_i + v_j).
             # If all greater than or equal zero, optimal solution is found
+            # Nalazenje najmanje vrednosti manje od nule: c(nebazisno)_i,j - (u_i + v_j).
+            # Ako su svi veci ili jednaki nuli, optimalno resenje je pronadjeno
             neg_values = []
             for i in range(self.c.shape[0]):
                 for j in range(self.c.shape[1]):
@@ -246,6 +244,7 @@ class TP:
                             neg_values.append((curr_diff, [i, j]))
 
             # Optimal solution found
+            # Pronadjeno optimalno resenje
             if len(neg_values) == 0:
                 print("***********************************")
                 print("Optimal solution found after %s iterations!" % str(iteration - 1))
@@ -263,8 +262,9 @@ class TP:
 
             # Positioning theta on the smallest negative value. Creating cycle - start from theta position, go
             # through basic variables and return at the starting position.
+            # Pozicioniranje tete na najmanji negativni broj. Kreiranje cikla - pocinje se od pozicije teta, prolazi
+            # se preko bazisnih promenljivih i vraca se na pocetnu poziciju.
             theta = np.zeros(shape=(self.c.shape[0], self.c.shape[1]))
-            # print(sorted(neg_values))
             pos_i = sorted(neg_values)[0][1][0]
             pos_j = sorted(neg_values)[0][1][1]
             self.x[pos_i][pos_j] = 1
@@ -276,6 +276,7 @@ class TP:
             positions = TP.find_theta_cycle(adjacency_list, marked, start)[:-1]
             sign = -1
             # Decode values and fill theta matrix
+            # Dekodiraj vrednosti i popuni matricu teta
             for pos in positions:
                 sign *= -1
                 i, j = TP.decode_position(pos)
