@@ -1,0 +1,67 @@
+Number of vertices: 5
+Add edge to graph? (y/n) y
+Starting node: 0
+End node: 1
+Edge weight: 7
+Edge (0, 1) with weight 7 added.
+Add edge to graph? (y/n) y
+Starting node: 1
+End node: 2
+Edge weight: 2
+Edge (1, 2) with weight 2 added.
+Add edge to graph? (y/n) y
+Starting node: 0
+End node: 4
+Edge weight: 9
+Edge (0, 4) with weight 9 added.
+Add edge to graph? (y/n) y
+Starting node: 0
+End node: 3
+Edge weight: 8
+Edge (0, 3) with weight 8 added.
+Add edge to graph? (y/n) y
+Starting node: 2
+End node: 3
+Edge weight: 6
+Edge (2, 3) with weight 6 added.
+Add edge to graph? (y/n) y
+Starting node: 3
+End node: 4
+Edge weight: 5
+Edge (3, 4) with weight 5 added.
+Add edge to graph? (y/n) y
+Starting node: 2
+End node: 4
+Edge weight: 4
+Edge (2, 4) with weight 4 added.
+Add edge to graph? (y/n) y
+Starting node: 1
+End node: 4
+Edge weight: 3
+Edge (1, 4) with weight 3 added.
+Add edge to graph? (y/n) n
+***********************
+* Kruskal's algorithm *
+***********************
+
+Given graph:
+[[0, 1, 7], [1, 2, 2], [0, 4, 9], [0, 3, 8], [2, 3, 6], [3, 4, 5], [2, 4, 4], [1, 4, 3]]
+
+Graph components:
+[[0, 1, 2, 3, 4]]
+
+#####################
+##Current component##
+#####################
+[0, 1, 2, 3, 4]
+-----------------------------
+MST for the current component
+-----------------------------
+1 - 2 = 2
+1 - 4 = 3
+3 - 4 = 5
+0 - 1 = 7
+Value: 17
+
+
+
