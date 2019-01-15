@@ -1,4 +1,4 @@
-# The Two Phase Simplex Method
+# Branch and Bound Method
 import numpy as np
 import sys
 import enum
@@ -338,6 +338,7 @@ class BAB:
         self.solution = None
 
     # Funkcija koja proverava da li je trenutno resenje celobrojno
+    # Check if current solution is an integer one
     @staticmethod
     def is_integer_solution(solution):
         eps = 1e-6
@@ -347,6 +348,7 @@ class BAB:
         return True
 
     # Odsecanje - brisemo gora resenja iz strukture
+    # Cutoff - delete worse solutions from current solutions
     @staticmethod
     def delete_worse_solutions(problems, value):
         i = 0
@@ -377,11 +379,16 @@ class BAB:
         else:
             f_opt = float('-inf')
         x_opt = []
+        # Dokle god imamo problema - koje dodajemo u skup problema kada je to neophodno
         while len(problems):
             print("--------")
             print("STEP #%s" % str(num_iter + 1))
             print("--------")
 
+            # Uzmemo sledeci problem, resimo ga dvofaznim simpleksom i dobijemo njegov vektor resenja i optimalnu
+            # vrednost tog problema (ako postoji takvo resenje).
+            # Take first problem in line, solve it using two phase simplex. Now, current solution vector and its optimal
+            # value available
             curr_problem = copy.deepcopy(problems[0])
             curr_problem[0].solve_problem()
             curr_solution = curr_problem[0].solution
@@ -393,54 +400,69 @@ class BAB:
                     curr_f, curr_x = float('inf'), None
                 else:
                     curr_f, curr_x = float('-inf'), None
+            # Uklanjamo problem iz skupa problema
+            # Remove that problem
             problems.pop(0)
 
+            # Da li je bolje od prethodnog resenje.
+            # Check whether the solution is better than the previous one.
             if (curr_f > f_opt and self.f_opt_sign == -1) or (curr_f < f_opt and self.f_opt_sign == 1):
+                # Proveri da li je celobrojno. Ako jeste, promeni trenutnu optimalnu vrednost na vrednosti dobijene
+                # resavanjem tog trenutnog problema.
+                # Update optimal values if current solution is integer
                 if self.is_integer_solution(np.around(curr_x, decimals=5)):
                     x_opt = curr_x
                     f_opt = curr_f
+                    # Odseci resenja za koja nema potrebe dalje ispitivati.
+                    # Cutoff
                     problems = self.delete_worse_solutions(problems, f_opt)
                 else:
                     eps = 1e-10
+                    # Za resenja koja nisu celobrojna, ali su bolja od trenutnog optimuma, izvrsiti relaksaciju, dodati
+                    # ogranicenje u problem i dodati ga u listu problema.
+                    # For non-integer solutions that are better than the current optimum, relax non-integer solution
+                    # elements and add that limitation to current problem. Add the newly constructed problem to the list
+                    # of problems.
                     for i in range(len(curr_x)):
+                        # Pronadji prvi element iz resenja koji je potrebno relaksirati.
+                        # Finding the first non-integer solution element.
                         if not np.modf(curr_x[i])[0] < eps:
+                            # Dodaj donju relaksaciju
+                            # Relax the x, floor(x), <=
                             row_to_add = np.zeros(shape=(1, self.initial_var_num))
                             row_to_add[0][i] = 1
                             new_a = np.r_[curr_problem[0].initial_a, row_to_add]
-                            # print(new_a)
 
                             new_b = copy.deepcopy(curr_problem[0].initial_b)
                             new_b.append(np.floor(curr_x[i]))
-                            # print(new_b)
 
                             new_ineq = copy.deepcopy(curr_problem[0].initial_inequalities)
                             new_ineq.append(RelationSymbols.less)
-                            # print(new_ineq)
 
-                            # if new_b != 0:
                             new_problem = TPSM(new_a, new_b, self.c, new_ineq, self.initial_var_num, self.f_opt_sign)
                             problems.append([copy.deepcopy(new_problem), curr_f])
 
+                            # Dodaj gornju relaksaciju
+                            # Relax the x, ceil(x), >=
                             row_to_add = np.zeros(shape=(1, self.initial_var_num))
                             row_to_add[0][i] = 1
                             new_a = np.r_[curr_problem[0].initial_a, row_to_add]
-                            # print(new_a)
 
                             new_b = copy.deepcopy(curr_problem[0].initial_b)
                             new_b.append(np.ceil(curr_x[i]))
-                            # print(new_b)
 
                             new_ineq = copy.deepcopy(curr_problem[0].initial_inequalities)
                             new_ineq.append(RelationSymbols.greater)
-                            # print(new_ineq)
 
                             new_problem = TPSM(new_a, new_b, self.c, new_ineq, self.initial_var_num, self.f_opt_sign)
                             problems.append([copy.deepcopy(new_problem), curr_f])
-                            # print(problems)
 
+                            # Necemo relaksirati sve elemente odjednom, vec jedan po jedan, pa zato izlazimo iz petlje
+                            # kad pronadjemo prvi neceo element iz resenja.
                             break
             num_iter += 1
 
+        # Rekonstrukcija resenja
         print("###########################################")
         print("FINAL SOLUTION FOUND USING BRANCH AND BOUND")
         print("###########################################")
@@ -460,7 +482,7 @@ class BAB:
             elif self.inequalities[i] == RelationSymbols.equals:
                 print(" = ", end="")
             print(self.initial_b[i])
-        if x_opt is not None:
+        if len(x_opt) > 0:
             print("******************************")
             print("Optimal solution is: ")
             print(x_opt[:self.initial_var_num])
@@ -482,36 +504,36 @@ def main():
     sys.stdout = FileLogger(output_file, mode)
     ans = 'y'
     while ans == 'y':
-        np.set_printoptions(suppress=True)
-        stop_logging_to_file()
-
-        rows = int(input("Enter number of rows in the matrix A: "))
-        columns = int(input("Enter number of columns in the matrix A: "))
-
-        matrix_a = []
-        inequalities = []
-        print("Enter the %s x %s matrix A one row by one and (in)equality signs when asked: " % (rows, columns))
-        for i in range(rows):
-            print("Row %d: " % (i + 1))
-            matrix_a.append(list(map(float, input().rstrip().split())))
-            c = input("Choose (in)equality type (<=, >=, =): ")
-            if c == "<=":
-                inequalities.append(RelationSymbols.less)
-            elif c == ">=":
-                inequalities.append(RelationSymbols.greater)
-            elif c == "=":
-                inequalities.append(RelationSymbols.equals)
-
-        b = []
-        print("Enter the b vector of length %s: " % rows)
-        b.append(list(map(float, input().rstrip().split())))
-
-        matrix_a = np.array(matrix_a)
-
-        c = []
-        print("Enter vector c, which will be optimized: ")
-        c.append(list(map(float, input().rstrip().split())))
-        opt = input("Optimization (min/max)? ")
+        # np.set_printoptions(suppress=True)
+        # stop_logging_to_file()
+        #
+        # rows = int(input("Enter number of rows in the matrix A: "))
+        # columns = int(input("Enter number of columns in the matrix A: "))
+        #
+        # matrix_a = []
+        # inequalities = []
+        # print("Enter the %s x %s matrix A one row by one and (in)equality signs when asked: " % (rows, columns))
+        # for i in range(rows):
+        #     print("Row %d: " % (i + 1))
+        #     matrix_a.append(list(map(float, input().rstrip().split())))
+        #     c = input("Choose (in)equality type (<=, >=, =): ")
+        #     if c == "<=":
+        #         inequalities.append(RelationSymbols.less)
+        #     elif c == ">=":
+        #         inequalities.append(RelationSymbols.greater)
+        #     elif c == "=":
+        #         inequalities.append(RelationSymbols.equals)
+        #
+        # b = []
+        # print("Enter the b vector of length %s: " % rows)
+        # b.append(list(map(float, input().rstrip().split())))
+        #
+        # matrix_a = np.array(matrix_a)
+        #
+        # c = []
+        # print("Enter vector c, which will be optimized: ")
+        # c.append(list(map(float, input().rstrip().split())))
+        # opt = input("Optimization (min/max)? ")
 
         # rows = 3
         # columns = 2
@@ -658,6 +680,78 @@ def main():
         # b = [[11, 5]]
         # inequalities = [RelationSymbols.less, RelationSymbols.less]
         # opt = "min"
+
+        # rows = 2
+        # columns = 2
+        # matrix_a = np.array([[-1, 3], [-1, 4]])
+        # c = [[1, 1]]
+        # b = [[5, 2]]
+        # inequalities = [RelationSymbols.greater, RelationSymbols.less]
+        # opt = "max"
+
+        # rows = 2
+        # columns = 2
+        # matrix_a = np.array([[-4, 6], [1, 1]])
+        # c = [[1, -2]]
+        # b = [[9, 4]]
+        # inequalities = [RelationSymbols.less, RelationSymbols.less]
+        # opt = "max"
+
+        # rows = 3
+        # columns = 2
+        # matrix_a = np.array([[2, 11], [1, 1], [4, -5]])
+        # c = [[1, 1]]
+        # b = [[38, 7, 5]]
+        # inequalities = [RelationSymbols.less, RelationSymbols.less, RelationSymbols.less]
+        # opt = "max"
+
+        # rows = 3
+        # columns = 2
+        # matrix_a = np.array([[8, -7], [1, 6], [7, -3]])
+        # c = [[1, 1]]
+        # b = [[-14, 60, 16]]
+        # inequalities = [RelationSymbols.greater, RelationSymbols.less, RelationSymbols.less]
+        # opt = "max"
+
+        # rows = 3
+        # columns = 2
+        # matrix_a = np.array([[5, -3], [9, -8], [2, 1]])
+        # c = [[1, 1]]
+        # b = [[10, -8, 24]]
+        # inequalities = [RelationSymbols.less, RelationSymbols.greater, RelationSymbols.less]
+        # opt = "max"
+
+        # rows = 3
+        # columns = 2
+        # matrix_a = np.array([[2, 11], [1, 1], [4, -5]])
+        # c = [[1, 1]]
+        # b = [[38, 7, 5]]
+        # inequalities = [RelationSymbols.less, RelationSymbols.less, RelationSymbols.less]
+        # opt = "max"
+
+        # rows = 3
+        # columns = 3
+        # matrix_a = np.array([[2, 1, 5], [1, -5, 1], [14, 2, -5]])
+        # c = [[1, 11, 2]]
+        # b = [[15, 7, 5]]
+        # inequalities = [RelationSymbols.less, RelationSymbols.greater, RelationSymbols.greater]
+        # opt = "max"
+
+        # rows = 3
+        # columns = 3
+        # matrix_a = np.array([[2, 1, 5], [1, 5, 1], [14, 2, -5]])
+        # c = [[1, 1, 0]]
+        # b = [[15, 7, 5]]
+        # inequalities = [RelationSymbols.greater, RelationSymbols.greater, RelationSymbols.greater]
+        # opt = "min"
+
+        # rows = 3
+        # columns = 2
+        # matrix_a = np.array([[3, 2], [0, 1]])
+        # c = [[1, 1]]
+        # b = [[5, 2]]
+        # inequalities = [RelationSymbols.less, RelationSymbols.less]
+        # opt = "max"
 
         f_opt_sign = 1
         if opt == "max":
