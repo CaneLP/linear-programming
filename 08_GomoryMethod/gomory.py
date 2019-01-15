@@ -1,10 +1,8 @@
-# Dual Simplex Method
+# Gomory Method
 import numpy as np
 import sys
 import enum
 import copy
-# import twophase as tps
-# import dual as du
 
 
 def mprint(mat, fmt="g", new_line=True):
@@ -602,15 +600,42 @@ class Gomory:
         return -np.dot(self.solution, self.initial_c)
 
 
-
 def main():
-    # output_file = "output.txt"
-    # mode = "a"
-    # sys.stdout = FileLogger(output_file, mode)
+    output_file = "output.txt"
+    mode = "a"
+    sys.stdout = FileLogger(output_file, mode)
     ans = 'y'
     while ans == 'y':
         np.set_printoptions(suppress=True)
-        # stop_logging_to_file()
+        stop_logging_to_file()
+
+        rows = int(input("Enter number of rows in the matrix A: "))
+        columns = int(input("Enter number of columns in the matrix A: "))
+
+        matrix_a = []
+        inequalities = []
+        print("Enter the %s x %s matrix A one row by one and (in)equality signs when asked: " % (rows, columns))
+        for i in range(rows):
+            print("Row %d: " % (i + 1))
+            matrix_a.append(list(map(float, input().rstrip().split())))
+            c = input("Choose (in)equality type (<=, >=, =): ")
+            if c == "<=":
+                inequalities.append(RelationSymbols.less)
+            elif c == ">=":
+                inequalities.append(RelationSymbols.greater)
+            elif c == "=":
+                inequalities.append(RelationSymbols.equals)
+
+        b = []
+        print("Enter the b vector of length %s: " % rows)
+        b.append(list(map(float, input().rstrip().split())))
+
+        matrix_a = np.array(matrix_a)
+
+        c = []
+        print("Enter vector c, which will be optimized: ")
+        c.append(list(map(float, input().rstrip().split())))
+        opt = input("Optimization (min/max)? ")
 
         # rows = 2
         # columns = 4
@@ -660,36 +685,12 @@ def main():
         # inequalities = [RelationSymbols.less, RelationSymbols.greater, RelationSymbols.less]
         # opt = "max"
 
-        rows = 3
-        columns = 2
-        matrix_a = np.array([[2, 11], [1, 1], [4, -5]])
-        c = [[1, 1]]
-        b = [[38, 7, 5]]
-        inequalities = [RelationSymbols.less, RelationSymbols.less, RelationSymbols.less]
-        opt = "max"
-
-        # rows = 3
-        # columns = 3
-        # matrix_a = np.array([[2, 1, 5], [1, -5, 1], [14, 2, -5]])
-        # c = [[1, 11, 2]]
-        # b = [[15, 7, 5]]
-        # inequalities = [RelationSymbols.less, RelationSymbols.greater, RelationSymbols.greater]
-        # opt = "max"
-
-        # rows = 3
-        # columns = 3
-        # matrix_a = np.array([[2, 1, 5], [1, 5, 1], [14, 2, -5]])
-        # c = [[1, 1, 0]]
-        # b = [[15, 7, 5]]
-        # inequalities = [RelationSymbols.greater, RelationSymbols.greater, RelationSymbols.greater]
-        # opt = "min"
-
         # rows = 3
         # columns = 2
-        # matrix_a = np.array([[3, 2], [0, 1]])
+        # matrix_a = np.array([[2, 11], [1, 1], [4, -5]])
         # c = [[1, 1]]
-        # b = [[5, 2]]
-        # inequalities = [RelationSymbols.less, RelationSymbols.less]
+        # b = [[38, 7, 5]]
+        # inequalities = [RelationSymbols.less, RelationSymbols.less, RelationSymbols.less]
         # opt = "max"
 
         f_opt_sign = 1
